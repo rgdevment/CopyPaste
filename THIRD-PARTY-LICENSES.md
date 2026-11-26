@@ -2,9 +2,9 @@
 
 <!-- Written by `npm run notices`. Do not edit by hand. -->
 
-The licence texts of the 431 crates named in
+The licence texts of the 428 crates named in
 [THIRD-PARTY-BUNDLED.md](https://github.com/rgdevment/CopyPaste/blob/main/THIRD-PARTY-BUNDLED.md), each written once with
-the crates that carry it: 254 texts. A text is read in full from the
+the crates that carry it: 255 texts. A text is read in full from the
 crate as it is published, from its licence, copying and notice files and its
 LICENSES folder. A crate that publishes none gets the licence its manifest
 declares, Apache-2.0 first where it is offered, with the holders its manifest
@@ -12,7 +12,7 @@ names.
 
 ## Text 1
 
-Carried by `const-field-offset` 0.2.1, `vtable` 0.5.0. Written out for `accesskit` 0.24.1, `accesskit_consumer` 0.38.0, `accesskit_macos` 0.26.3, `accesskit_windows` 0.34.0, `accesskit_winit` 0.33.2, `dispatch2` 0.3.1, `lyon_algorithms` 1.0.22, `lyon_extra` 1.1.0, `lyon_geom` 1.0.20, `lyon_path` 1.0.19, `objc2-app-kit` 0.3.2, `objc2-application-services` 0.3.2, `objc2-av-foundation` 0.3.2, `objc2-avf-audio` 0.3.2, `objc2-cloud-kit` 0.3.2, `objc2-core-audio-types` 0.3.2, `objc2-core-data` 0.3.2, `objc2-core-foundation` 0.3.2, `objc2-core-graphics` 0.3.2, `objc2-core-image` 0.3.2, `objc2-core-media` 0.3.2, `objc2-core-ml` 0.3.2, `objc2-core-services` 0.3.2, `objc2-core-text` 0.3.2, `objc2-core-video` 0.3.2, `objc2-exception-helper` 0.1.1, `objc2-image-io` 0.3.2, `objc2-media-toolbox` 0.3.2, `objc2-metal` 0.3.2, `objc2-osa-kit` 0.3.2, `objc2-quartz-core` 0.3.2, `objc2-service-management` 0.3.2, `objc2-vision` 0.3.2, `objc2-web-kit` 0.3.2, `profiling` 1.0.18, from the licence the manifest declares: the crate ships no licence file.
+Carried by `const-field-offset` 0.2.1, `vtable` 0.5.1. Written out for `accesskit` 0.25.2, `accesskit_consumer` 0.39.2, `accesskit_macos` 0.27.2, `accesskit_windows` 0.35.2, `accesskit_winit` 0.34.2, `dispatch2` 0.3.1, `lyon_algorithms` 1.0.22, `lyon_extra` 1.1.0, `lyon_geom` 1.0.20, `lyon_path` 1.0.19, `objc2-app-kit` 0.3.2, `objc2-application-services` 0.3.2, `objc2-av-foundation` 0.3.2, `objc2-avf-audio` 0.3.2, `objc2-cloud-kit` 0.3.2, `objc2-core-audio-types` 0.3.2, `objc2-core-data` 0.3.2, `objc2-core-foundation` 0.3.2, `objc2-core-graphics` 0.3.2, `objc2-core-image` 0.3.2, `objc2-core-media` 0.3.2, `objc2-core-ml` 0.3.2, `objc2-core-services` 0.3.2, `objc2-core-text` 0.3.2, `objc2-core-video` 0.3.2, `objc2-exception-helper` 0.1.1, `objc2-image-io` 0.3.2, `objc2-media-toolbox` 0.3.2, `objc2-metal` 0.3.2, `objc2-osa-kit` 0.3.2, `objc2-quartz-core` 0.3.2, `objc2-service-management` 0.3.2, `objc2-vision` 0.3.2, `objc2-web-kit` 0.3.2, `profiling` 1.0.18, from the licence the manifest declares: the crate ships no licence file.
 
 ```text
 Apache License
@@ -319,7 +319,7 @@ limitations under the License.
 
 ## Text 4
 
-Carried by `adler2` 2.0.1, `allocator-api2` 0.2.21, `anyhow` 1.0.104, `atomic-waker` 1.1.2, `erased-serde` 0.4.10, `fastrand` 2.5.0, `glow` 0.18.0, `itoa` 1.0.18, `lazy_static` 1.5.1, `once_cell` 1.21.4, `pin-project` 1.1.13, `pin-project-lite` 0.2.17, `portable-atomic` 1.15.0, `rustc-hash` 1.1.0, `rustix` 1.1.5, `semver` 1.0.28, `serde` 1.0.229, `serde-untagged` 0.1.9, `serde_core` 1.0.229, `serde_json` 1.0.154, `smol_str` 0.2.2, `spin_on` 0.1.1, `thiserror` 2.0.21, `typeid` 1.0.3, `unicode-ident` 1.0.27, `zmij` 1.0.23.
+Carried by `adler2` 2.0.1, `allocator-api2` 0.2.21, `anyhow` 1.0.105, `atomic-waker` 1.1.2, `erased-serde` 0.4.11, `fastrand` 2.5.0, `glow` 0.18.0, `itoa` 1.0.19, `lazy_static` 1.5.1, `once_cell` 1.21.4, `pin-project` 1.2.0, `pin-project-lite` 0.2.18, `portable-atomic` 1.15.0, `rustc-hash` 1.1.0, `rustix` 1.1.6, `semver` 1.0.28, `serde` 1.0.229, `serde-untagged` 0.1.9, `serde_core` 1.0.229, `serde_json` 1.0.154, `smol_str` 0.2.2, `spin_on` 0.1.1, `thiserror` 2.0.21, `typeid` 1.0.3, `unicode-ident` 1.0.27, `zmij` 1.0.23.
 
 ```text
 Permission is hereby granted, free of charge, to any
@@ -349,7 +349,7 @@ DEALINGS IN THE SOFTWARE.
 
 ## Text 5
 
-Carried by `aho-corasick` 1.1.5, `memchr` 2.8.3, `same-file` 1.0.6, `walkdir` 2.5.0, `winapi-util` 0.1.11.
+Carried by `aho-corasick` 1.1.5, `memchr` 2.8.3, `same-file` 1.0.6, `walkdir` 2.5.1, `winapi-util` 0.1.11.
 
 ```text
 This project is dual-licensed under the Unlicense and MIT licenses.
@@ -359,7 +359,7 @@ You may use this code under the terms of either license.
 
 ## Text 6
 
-Carried by `aho-corasick` 1.1.5, `byteorder-lite` 0.1.0, `memchr` 2.8.3, `walkdir` 2.5.0.
+Carried by `aho-corasick` 1.1.5, `byteorder-lite` 0.1.0, `memchr` 2.8.3, `walkdir` 2.5.1.
 
 ```text
 The MIT License (MIT)
@@ -387,7 +387,7 @@ THE SOFTWARE.
 
 ## Text 7
 
-Carried by `alloc-no-stdlib` 3.0.0, `brotli` 9.0.0, `brotli-decompressor` 6.0.1.
+Carried by `alloc-no-stdlib` 3.0.0, `brotli` 9.1.3, `brotli-decompressor` 6.4.0.
 
 ```text
 Copyright (c) 2016 Dropbox, Inc.
@@ -441,7 +441,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Text 9
 
-Carried by `allocator-api2` 0.2.21, `anyhow` 1.0.104, `constant_time_eq` 0.4.2, `erased-serde` 0.4.10, `itoa` 1.0.18, `libc` 0.2.191, `osakit` 0.3.1, `semver` 1.0.28, `serde` 1.0.229, `serde-untagged` 0.1.9, `serde_core` 1.0.229, `serde_json` 1.0.154, `thiserror` 2.0.21, `typeid` 1.0.3, `unicode-ident` 1.0.27.
+Carried by `allocator-api2` 0.2.21, `anyhow` 1.0.105, `constant_time_eq` 0.4.2, `erased-serde` 0.4.11, `itoa` 1.0.19, `libc` 0.2.191, `osakit` 0.3.1, `parley_engine` 0.12.0, `semver` 1.0.28, `serde` 1.0.229, `serde-untagged` 0.1.9, `serde_core` 1.0.229, `serde_json` 1.0.154, `thiserror` 2.0.21, `typeid` 1.0.3, `unicode-ident` 1.0.27.
 
 ```text
 Apache License
@@ -624,7 +624,7 @@ END OF TERMS AND CONDITIONS
 
 ## Text 10
 
-Carried by `arboard` 3.7.0, `fdeflate` 0.3.7, `field-offset` 0.3.6, `half` 2.7.1, `image` 0.25.10, `image-webp` 0.2.4, `linebender_resource_handle` 0.1.1, `miniz_oxide` 0.8.9, `miniz_oxide` 0.9.1, `naga` 30.0.1, `naga-types` 30.0.1, `num-conv` 0.2.2, `pin-project` 1.1.13, `pin-project-lite` 0.2.17, `portable-atomic` 1.15.0, `range-alloc` 0.1.5, `raw-window-handle` 0.6.2, `resvg` 0.48.1, `simdutf8` 0.1.5, `sync_wrapper` 1.0.2, `tauri` 2.12.5, `tauri-plugin-dialog` 2.8.3, `tauri-plugin-fs` 2.7.1, `tauri-plugin-global-shortcut` 2.4.1, `tauri-plugin-opener` 2.7.2, `tauri-plugin-shell` 2.5.0, `tauri-plugin-single-instance` 2.5.4, `tauri-plugin-updater` 2.14.0, `tauri-runtime` 2.12.2, `tauri-runtime-wry` 2.12.3, `tauri-utils` 2.10.2, `time` 0.3.55, `time-core` 0.1.9, `usvg` 0.48.1, `wgpu` 30.0.1, `wgpu-core` 30.0.1, `wgpu-core-deps-apple` 30.0.1, `wgpu-core-deps-windows-linux-android` 30.0.1, `wgpu-hal` 30.0.1, `wgpu-naga-bridge` 30.0.1, `wgpu-types` 30.0.1.
+Carried by `arboard` 3.7.0, `fdeflate` 0.3.7, `field-offset` 0.3.6, `half` 2.7.1, `image` 0.25.10, `image-webp` 0.2.4, `linebender_resource_handle` 0.1.1, `miniz_oxide` 0.8.9, `miniz_oxide` 0.9.1, `naga` 30.0.2, `naga-types` 30.0.2, `num-conv` 0.2.2, `pin-project` 1.2.0, `pin-project-lite` 0.2.18, `portable-atomic` 1.15.0, `range-alloc` 0.1.5, `raw-window-handle` 0.6.2, `resvg` 0.49.0, `simdutf8` 0.1.5, `sync_wrapper` 1.0.2, `tauri` 2.12.7, `tauri-plugin-dialog` 2.8.4, `tauri-plugin-fs` 2.7.1, `tauri-plugin-global-shortcut` 2.4.1, `tauri-plugin-opener` 2.7.3, `tauri-plugin-shell` 2.6.0, `tauri-plugin-single-instance` 2.5.5, `tauri-plugin-updater` 2.14.1, `tauri-runtime` 2.12.4, `tauri-runtime-wry` 2.12.5, `tauri-utils` 2.10.4, `time` 0.3.55, `time-core` 0.1.9, `usvg` 0.49.0, `wgpu` 30.0.2, `wgpu-core` 30.0.2, `wgpu-core-deps-apple` 30.0.2, `wgpu-core-deps-windows-linux-android` 30.0.2, `wgpu-hal` 30.0.2, `wgpu-naga-bridge` 30.0.2, `wgpu-types` 30.0.2.
 
 ```text
 Apache License
@@ -868,7 +868,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Text 13
 
-Carried by `arrayvec` 0.7.8, `atomic-waker` 1.1.2, `base64` 0.22.1, `base64` 0.23.1, `bitflags` 1.3.2, `bitflags` 2.13.2, `cfg-if` 1.0.5, `cgl` 0.3.2, `core-foundation` 0.10.1, `core-foundation` 0.9.4, `core-foundation-sys` 0.8.7, `core-graphics` 0.23.2, `core-graphics` 0.25.0, `core-graphics-types` 0.1.3, `core-graphics-types` 0.2.0, `core_detect` 1.0.0, `critical-section` 1.2.0, `crossbeam-channel` 0.5.17, `crossbeam-utils` 0.8.23, `data-url` 0.3.2, `equivalent` 1.0.3, `errno` 0.3.14, `euclid` 0.22.14, `fastrand` 2.5.0, `filetime` 0.2.29, `flate2` 1.1.10, `fnv` 1.0.7, `fontique` 0.11.1, `form_urlencoded` 1.2.2, `gif` 0.14.2, `glob` 0.3.4, `global-hotkey` 0.8.0, `glow` 0.18.0, `hashbrown` 0.16.1, `hashbrown` 0.17.1, `heck` 0.5.0, `htmlparser` 0.2.1, `httparse` 1.10.1, `hyper-rustls` 0.27.10, `idna` 1.1.0, `idna_adapter` 1.2.2, `indexmap` 2.14.2, `keyboard-types` 0.7.0, `keyboard-types` 0.8.3, `lazy_static` 1.5.1, `lock_api` 0.4.14, `log` 0.4.34, `mime` 0.3.17, `muda` 0.19.3, `muda` 0.20.0, `num-complex` 0.4.6, `num-traits` 0.2.19, `once_cell` 1.21.4, `parking_lot` 0.12.5, `parking_lot_core` 0.9.12, `parlance` 0.1.1, `parley` 0.11.1, `parley_data` 0.11.1, `percent-encoding` 2.3.2, `png` 0.18.1, `regex` 1.13.1, `regex-automata` 0.4.18, `regex-lite` 0.1.9, `regex-syntax` 0.8.11, `renderdoc-sys` 1.1.0, `roxmltree` 0.21.1, `rustc-hash` 1.1.0, `rustix` 1.1.5, `rustls` 0.23.46, `scoped-tls-hkt` 0.1.5, `scopeguard` 1.2.0, `security-framework` 3.7.0, `security-framework-sys` 2.17.0, `serde_with` 3.24.0, `simplecss` 0.2.2, `smallvec` 1.16.3, `smol_str` 0.2.2, `socket2` 0.6.5, `spin_on` 0.1.1, `stable_deref_trait` 1.2.1, `svgtypes` 0.16.1, `system-configuration` 0.7.0, `system-configuration-sys` 0.6.0, `tar` 0.4.46, `tempfile` 3.27.0, `tray-icon` 0.25.1, `unicase` 2.10.0, `unicode-bidi` 0.3.18, `unicode-normalization` 0.1.26, `unicode-segmentation` 1.13.3, `unicode-vo` 0.1.0, `unicode-width` 0.2.2, `url` 2.5.8, `uuid` 1.28.0, `weezl` 0.1.12, `window-vibrancy` 0.8.1, `wry` 0.57.0, `xattr` 1.6.1.
+Carried by `arrayvec` 0.7.8, `atomic-waker` 1.1.2, `base64` 0.23.1, `bitflags` 1.3.2, `bitflags` 2.13.2, `cfg-if` 1.0.5, `cgl` 0.3.2, `core-foundation` 0.10.1, `core-foundation` 0.9.4, `core-foundation-sys` 0.8.7, `core-graphics` 0.23.2, `core-graphics` 0.25.0, `core-graphics-types` 0.1.3, `core-graphics-types` 0.2.0, `core_detect` 1.0.0, `critical-section` 1.2.0, `crossbeam-channel` 0.5.17, `crossbeam-utils` 0.8.23, `data-url` 0.3.2, `either` 1.19.0, `equivalent` 1.0.3, `errno` 0.3.15, `euclid` 0.22.14, `fastrand` 2.5.0, `filetime` 0.2.30, `flate2` 1.1.11, `fnv` 1.0.7, `fontique` 0.12.0, `form_urlencoded` 1.2.3, `gif` 0.14.2, `glob` 0.3.4, `global-hotkey` 0.8.0, `glow` 0.18.0, `hashbrown` 0.16.1, `hashbrown` 0.17.2, `htmlparser` 0.2.1, `httparse` 1.10.1, `hyper-rustls` 0.27.10, `idna` 1.1.0, `idna_adapter` 1.2.2, `indexmap` 2.14.2, `itertools` 0.15.0, `keyboard-types` 0.7.0, `keyboard-types` 0.8.3, `lazy_static` 1.5.1, `lock_api` 0.4.14, `log` 0.4.35, `mime` 0.3.18, `muda` 0.20.0, `muda` 0.21.2, `num-complex` 0.4.6, `num-traits` 0.2.19, `once_cell` 1.21.4, `parking_lot` 0.12.5, `parking_lot_core` 0.9.12, `parlance` 0.1.1, `parley` 0.12.0, `parley_data` 0.12.0, `percent-encoding` 2.3.2, `png` 0.18.1, `regex` 1.13.2, `regex-automata` 0.4.19, `regex-lite` 0.1.9, `regex-syntax` 0.8.12, `renderdoc-sys` 1.1.0, `roxmltree` 0.21.2, `rustc-hash` 1.1.0, `rustix` 1.1.6, `rustls` 0.23.46, `scoped-tls-hkt` 0.1.5, `scopeguard` 1.2.0, `security-framework` 3.7.0, `security-framework-sys` 2.17.0, `serde_with` 3.25.0, `simplecss` 0.2.2, `smallvec` 1.16.6, `smol_str` 0.2.2, `socket2` 0.6.5, `spin_on` 0.1.1, `stable_deref_trait` 1.2.1, `svgtypes` 0.16.2, `system-configuration` 0.7.0, `system-configuration-sys` 0.6.0, `tar` 0.4.46, `tempfile` 3.27.0, `tray-icon` 0.25.1, `unicase` 2.10.0, `unicode-bidi` 0.3.18, `unicode-normalization` 0.1.26, `unicode-segmentation` 1.13.3, `unicode-vo` 0.1.0, `unicode-width` 0.2.3, `url` 2.5.9, `uuid` 1.29.3, `weezl` 0.1.12, `window-vibrancy` 0.8.1, `wry` 0.57.4, `xattr` 1.7.0.
 
 ```text
 Apache License
@@ -1160,34 +1160,6 @@ DEALINGS IN THE SOFTWARE.
 
 ## Text 16
 
-Carried by `base64` 0.22.1.
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2015 Alice Maz
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-```
-
-## Text 17
-
 Carried by `base64` 0.23.1.
 
 ```text
@@ -1214,7 +1186,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 18
+## Text 17
 
 Carried by `bit-set` 0.10.0, `bit-vec` 0.9.1, `hashlink` 0.12.2, `presser` 0.3.1.
 
@@ -1422,7 +1394,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 19
+## Text 18
 
 Carried by `bit-set` 0.10.0.
 
@@ -1454,7 +1426,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 20
+## Text 19
 
 Carried by `bit-vec` 0.9.1.
 
@@ -1486,9 +1458,9 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 21
+## Text 20
 
-Carried by `bitflags` 1.3.2, `bitflags` 2.13.2, `glob` 0.3.4, `log` 0.4.34, `num-complex` 0.4.6, `num-traits` 0.2.19, `regex` 1.13.1, `regex-automata` 0.4.18, `regex-lite` 0.1.9, `regex-syntax` 0.8.11.
+Carried by `bitflags` 1.3.2, `bitflags` 2.13.2, `glob` 0.3.4, `log` 0.4.35, `num-complex` 0.4.6, `num-traits` 0.2.19, `regex` 1.13.2, `regex-automata` 0.4.19, `regex-lite` 0.1.9, `regex-syntax` 0.8.12.
 
 ```text
 Copyright (c) 2014 The Rust Project Developers
@@ -1518,7 +1490,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 22
+## Text 21
 
 Carried by `blake3` 1.8.7.
 
@@ -1726,7 +1698,7 @@ Apache License
    limitations under the License.
 ```
 
-## Text 23
+## Text 22
 
 Carried by `blake3` 1.8.7.
 
@@ -1951,7 +1923,7 @@ the License, but only in their entirety and only with respect to the Combined
 Software.
 ```
 
-## Text 24
+## Text 23
 
 Carried by `blake3` 1.8.7, `constant_time_eq` 0.4.2, `dunce` 1.0.5.
 
@@ -2079,7 +2051,7 @@ express Statement of Purpose.
     this CC0 or use of the Work.
 ```
 
-## Text 25
+## Text 24
 
 Written out for `block2` 0.5.1, `objc2` 0.5.3, from the licence the manifest declares: the crate ships no licence file.
 
@@ -2107,7 +2079,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 26
+## Text 25
 
 Written out for `block2` 0.6.2, `objc-sys` 0.3.5, `objc2` 0.6.5, `objc2-encode` 4.1.0, from the licence the manifest declares: the crate ships no licence file.
 
@@ -2135,9 +2107,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 27
+## Text 26
 
-Carried by `brotli` 9.0.0.
+Carried by `brotli` 9.1.3.
 
 ```text
 Copyright (c) 2009, 2010, 2013-2016 by the Brotli Authors.
@@ -2161,7 +2133,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 28
+## Text 27
 
 Carried by `bytemuck` 1.25.2.
 
@@ -2229,7 +2201,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 29
+## Text 28
 
 Carried by `bytemuck` 1.25.2.
 
@@ -2245,7 +2217,7 @@ The above copyright notice and this permission notice (including the next paragr
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 30
+## Text 29
 
 Carried by `bytemuck` 1.25.2, `tinyvec` 1.13.3.
 
@@ -2263,9 +2235,9 @@ Permission is granted to anyone to use this software for any purpose, including 
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-## Text 31
+## Text 30
 
-Carried by `bytes` 1.12.1.
+Carried by `bytes` 1.12.2.
 
 ```text
 Copyright (c) 2018 Carl Lerche
@@ -2295,7 +2267,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 32
+## Text 31
 
 Carried by `cfb` 0.14.0.
 
@@ -2323,9 +2295,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 33
+## Text 32
 
-Carried by `cfg-if` 1.0.5, `filetime` 0.2.29, `socket2` 0.6.5.
+Carried by `cfg-if` 1.0.5, `filetime` 0.2.30, `socket2` 0.6.5.
 
 ```text
 Copyright (c) 2014 Alex Crichton
@@ -2355,7 +2327,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 34
+## Text 33
 
 Carried by `cgl` 0.3.2.
 
@@ -2367,7 +2339,7 @@ option. All files in the project carrying such notice may not be
 copied, modified, or distributed except according to those terms.
 ```
 
-## Text 35
+## Text 34
 
 Carried by `cgl` 0.3.2, `core-foundation` 0.10.1, `core-foundation` 0.9.4, `core-foundation-sys` 0.8.7, `core-graphics` 0.23.2, `core-graphics` 0.25.0, `core-graphics-types` 0.1.3, `core-graphics-types` 0.2.0, `euclid` 0.22.14.
 
@@ -2399,7 +2371,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 36
+## Text 35
 
 Carried by `chrono` 0.4.45.
 
@@ -2645,7 +2617,7 @@ limitations under the License.
 ~~~~
 ```
 
-## Text 37
+## Text 36
 
 Written out for `clipboard-win` 5.4.3, from the licence the manifest declares: the crate ships no licence file.
 
@@ -2659,7 +2631,7 @@ The copyright notices in the Software and this entire statement, including the a
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 38
+## Text 37
 
 Carried by `clru` 0.6.3.
 
@@ -2685,9 +2657,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 39
+## Text 38
 
-Carried by `codespan-reporting` 0.13.1, `embed_plist` 1.2.2, `encoding_rs` 0.8.42, `kurbo` 0.13.1, `polycool` 0.4.0, `raw-window-metal` 1.1.0, `rustls-platform-verifier` 0.7.1, `serialize-to-javascript` 0.1.2, `siphasher` 1.0.4, `static_assertions` 1.1.0, `sys-locale` 0.3.2, `tinyvec` 1.13.3, `unicode-linebreak` 0.1.5, `utf8_iter` 1.0.4, `zeroize` 1.9.1, `zune-core` 0.5.3, `zune-jpeg` 0.5.15.
+Carried by `codespan-reporting` 0.13.1, `embed_plist` 1.2.2, `encoding_rs` 0.8.44, `kurbo` 0.13.1, `polycool` 0.4.0, `raw-window-metal` 1.1.0, `rustls-platform-verifier` 0.7.1, `serialize-to-javascript` 0.1.2, `siphasher` 1.0.4, `static_assertions` 1.1.0, `sys-locale` 0.3.2, `tinyvec` 1.13.3, `unicode-linebreak` 0.1.5, `utf8_iter` 1.1.0, `utf_types` 1.0.0, `zeroize` 1.9.2, `zune-core` 0.5.3, `zune-jpeg` 0.5.15.
 
 ```text
 Apache License
@@ -2893,7 +2865,7 @@ Apache License
    limitations under the License.
 ```
 
-## Text 40
+## Text 39
 
 Carried by `color_quant` 1.1.0.
 
@@ -2921,9 +2893,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 41
+## Text 40
 
-Carried by `const-field-offset` 0.2.1, `vtable` 0.5.0.
+Carried by `const-field-offset` 0.2.1, `vtable` 0.5.1.
 
 ```text
 MIT License
@@ -2937,7 +2909,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 42
+## Text 41
 
 Carried by `constant_time_eq` 0.4.2.
 
@@ -2958,9 +2930,9 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 43
+## Text 42
 
-Carried by `cookie` 0.18.2.
+Carried by `cookie` 0.18.3.
 
 ```text
 Apache License
@@ -3167,9 +3139,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 44
+## Text 43
 
-Carried by `cookie` 0.18.2.
+Carried by `cookie` 0.18.3.
 
 ```text
 Copyright (c) 2017 Sergio Benitez
@@ -3200,7 +3172,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 45
+## Text 44
 
 Carried by `core_detect` 1.0.0.
 
@@ -3232,7 +3204,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 46
+## Text 45
 
 Carried by `cpufeatures` 0.3.1.
 
@@ -3440,7 +3412,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 47
+## Text 46
 
 Carried by `cpufeatures` 0.3.1.
 
@@ -3472,9 +3444,9 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 48
+## Text 47
 
-Carried by `crc32fast` 1.5.3, `ctor` 1.0.13, `dpi` 0.1.2, `fallible-iterator` 0.3.0, `fallible-streaming-iterator` 0.1.9, `foreign-types` 0.5.0, `foreign-types-shared` 0.3.1, `json-patch` 4.2.0, `quick-error` 2.0.1, `tao` 0.37.1, `winit` 0.30.13.
+Carried by `crc32fast` 1.5.6, `ctor` 1.0.14, `dpi` 0.1.2, `fallible-iterator` 0.3.0, `fallible-streaming-iterator` 0.1.9, `foreign-types` 0.5.0, `foreign-types-shared` 0.3.1, `json-patch` 4.2.0, `quick-error` 2.0.1, `tao` 0.37.3, `winit` 0.30.13.
 
 ```text
 Apache License
@@ -3680,9 +3652,9 @@ Apache License
    limitations under the License.
 ```
 
-## Text 49
+## Text 48
 
-Carried by `crc32fast` 1.5.3.
+Carried by `crc32fast` 1.5.6.
 
 ```text
 MIT License
@@ -3708,7 +3680,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 50
+## Text 49
 
 Carried by `critical-section` 1.2.0.
 
@@ -3740,7 +3712,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 51
+## Text 50
 
 Carried by `crossbeam-channel` 0.5.17, `crossbeam-utils` 0.8.23.
 
@@ -3774,7 +3746,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 52
+## Text 51
 
 Carried by `crossbeam-channel` 0.5.17.
 
@@ -4374,9 +4346,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 53
+## Text 52
 
-Carried by `ctor` 1.0.13, `tinyvec` 1.13.3.
+Carried by `ctor` 1.0.14, `tinyvec` 1.13.3.
 
 ```text
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -4386,7 +4358,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 54
+## Text 53
 
 Carried by `cursor-icon` 1.2.0.
 
@@ -4594,7 +4566,7 @@ Apache License
    limitations under the License.
 ```
 
-## Text 55
+## Text 54
 
 Carried by `cursor-icon` 1.2.0.
 
@@ -4620,7 +4592,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 56
+## Text 55
 
 Carried by `cursor-icon` 1.2.0.
 
@@ -4638,9 +4610,9 @@ Permission is granted to anyone to use this software for any purpose, including 
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-## Text 57
+## Text 56
 
-Carried by `data-url` 0.3.2, `idna` 1.1.0, `percent-encoding` 2.3.2, `url` 2.5.8.
+Carried by `data-url` 0.3.2, `idna` 1.1.0, `percent-encoding` 2.3.2, `url` 2.5.9.
 
 ```text
 Copyright (c) 2013-2025 The rust-url developers
@@ -4670,7 +4642,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 58
+## Text 57
 
 Carried by `deranged` 0.5.9.
 
@@ -4878,7 +4850,7 @@ Apache License
    limitations under the License.
 ```
 
-## Text 59
+## Text 58
 
 Carried by `deranged` 0.5.9.
 
@@ -4904,7 +4876,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 60
+## Text 59
 
 Carried by `derive_more` 2.1.1.
 
@@ -4932,7 +4904,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 61
+## Text 60
 
 Carried by `dirs` 7.0.0, `dirs-sys` 0.5.0.
 
@@ -5113,7 +5085,7 @@ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
    of your accepting any such warranty or additional liability.
 ```
 
-## Text 62
+## Text 61
 
 Carried by `dirs` 7.0.0, `dirs-sys` 0.5.0.
 
@@ -5139,7 +5111,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 63
+## Text 62
 
 Written out for `dispatch` 0.2.0, from the licence the manifest declares: the crate ships no licence file.
 
@@ -5167,7 +5139,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 64
+## Text 63
 
 Carried by `dpi` 0.1.2.
 
@@ -5225,6 +5197,38 @@ have been licensed under extremely permissive terms.
 ------------------------------------------------------------------------------
 ```
 
+## Text 64
+
+Carried by `either` 1.19.0, `itertools` 0.15.0, `serde_with` 3.25.0.
+
+```text
+Copyright (c) 2015
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+```
+
 ## Text 65
 
 Carried by `embed_plist` 1.2.2.
@@ -5255,7 +5259,7 @@ SOFTWARE.
 
 ## Text 66
 
-Carried by `encoding_rs` 0.8.42, `utf8_iter` 1.0.4.
+Carried by `encoding_rs` 0.8.44, `utf8_iter` 1.1.0, `utf_types` 1.0.0.
 
 ```text
 Copyright Mozilla Foundation
@@ -5287,7 +5291,7 @@ DEALINGS IN THE SOFTWARE.
 
 ## Text 67
 
-Carried by `encoding_rs` 0.8.42.
+Carried by `encoding_rs` 0.8.44.
 
 ```text
 Copyright © WHATWG (Apple, Google, Mozilla, Microsoft).
@@ -5352,7 +5356,7 @@ DEALINGS IN THE SOFTWARE.
 
 ## Text 69
 
-Carried by `errno` 0.3.14.
+Carried by `errno` 0.3.15.
 
 ```text
 Copyright (c) 2014 Chris Wong
@@ -5384,7 +5388,7 @@ DEALINGS IN THE SOFTWARE.
 
 ## Text 70
 
-Carried by `error-code` 3.4.0, `xxhash-rust` 0.8.19.
+Carried by `error-code` 3.4.0, `xxhash-rust` 0.8.21.
 
 ```text
 Boost Software License - Version 1.0 - August 17th, 2003
@@ -5566,7 +5570,7 @@ SOFTWARE.
 
 ## Text 77
 
-Carried by `fixed_decimal` 0.7.2, `icu_collections` 2.3.0, `icu_decimal` 2.3.0, `icu_decimal_data` 2.3.0, `icu_locale_core` 2.3.0, `icu_locale_fallback` 2.3.0, `icu_locale_fallback_data` 2.3.0, `icu_normalizer` 2.3.0, `icu_normalizer_data` 2.3.0, `icu_properties` 2.3.0, `icu_properties_data` 2.3.0, `icu_provider` 2.3.1, `icu_segmenter` 2.3.0, `icu_segmenter_data` 2.3.0, `litemap` 0.8.3, `potential_utf` 0.1.6, `tinystr` 0.8.4, `writeable` 0.6.4, `yoke` 0.8.3, `zerofrom` 0.1.8, `zerotrie` 0.2.5, `zerovec` 0.11.8.
+Carried by `fixed_decimal` 0.7.3, `icu_collections` 2.4.0, `icu_decimal` 2.4.0, `icu_decimal_data` 2.4.0, `icu_locale_core` 2.4.0, `icu_locale_fallback` 2.4.0, `icu_locale_fallback_data` 2.4.0, `icu_normalizer` 2.4.0, `icu_normalizer_data` 2.4.0, `icu_properties` 2.4.0, `icu_properties_data` 2.4.0, `icu_provider` 2.4.0, `icu_segmenter` 2.4.0, `icu_segmenter_data` 2.4.0, `litemap` 0.8.3, `potential_utf` 0.1.6, `tinystr` 0.8.5, `writeable` 0.6.4, `yoke` 0.8.4, `zerofrom` 0.1.8, `zerotrie` 0.2.5, `zerovec` 0.11.9.
 
 ```text
 UNICODE LICENSE V3
@@ -5619,7 +5623,7 @@ ICU 1.8.1 to ICU 57.1 © 1995-2016 International Business Machines Corporation a
 
 ## Text 78
 
-Carried by `flate2` 1.1.10.
+Carried by `flate2` 1.1.11.
 
 ```text
 Copyright (c) 2014-2026 Alex Crichton
@@ -5869,7 +5873,7 @@ SOFTWARE.
 
 ## Text 85
 
-Carried by `fontique` 0.11.1.
+Carried by `fontique` 0.12.0.
 
 ```text
 Copyright 2024 the Parley Authors
@@ -5927,7 +5931,7 @@ SOFTWARE.
 
 ## Text 87
 
-Carried by `form_urlencoded` 1.2.2.
+Carried by `form_urlencoded` 1.2.3.
 
 ```text
 Copyright (c) 2013-2016 The rust-url developers
@@ -6536,7 +6540,7 @@ SOFTWARE.
 
 ## Text 95
 
-Carried by `global-hotkey` 0.8.0, `muda` 0.19.3, `muda` 0.20.0, `tray-icon` 0.25.1.
+Carried by `global-hotkey` 0.8.0, `muda` 0.20.0, `muda` 0.21.2, `tray-icon` 0.25.1.
 
 ```text
 MIT License
@@ -7071,7 +7075,7 @@ SOFTWARE.
 
 ## Text 102
 
-Carried by `hashbrown` 0.16.1, `hashbrown` 0.17.1.
+Carried by `hashbrown` 0.16.1, `hashbrown` 0.17.2.
 
 ```text
 Copyright (c) 2016 Amanieu d'Antras
@@ -7136,38 +7140,6 @@ DEALINGS IN THE SOFTWARE.
 
 ## Text 104
 
-Carried by `heck` 0.5.0, `unicode-bidi` 0.3.18, `unicode-normalization` 0.1.26, `unicode-segmentation` 1.13.3, `unicode-width` 0.2.2.
-
-```text
-Copyright (c) 2015 The Rust Project Developers
-
-Permission is hereby granted, free of charge, to any
-person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the
-Software without restriction, including without
-limitation the rights to use, copy, modify, merge,
-publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software
-is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice
-shall be included in all copies or substantial portions
-of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
-ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
-TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
-IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
-```
-
-## Text 105
-
 Carried by `htmlparser` 0.2.1, `simplecss` 0.2.2, `unicode-vo` 0.1.0.
 
 ```text
@@ -7194,7 +7166,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 106
+## Text 105
 
 Carried by `http` 1.5.0.
 
@@ -7402,7 +7374,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 107
+## Text 106
 
 Carried by `http` 1.5.0.
 
@@ -7434,7 +7406,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 108
+## Text 107
 
 Carried by `http-body` 1.1.0, `http-body-util` 0.1.5.
 
@@ -7466,7 +7438,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 109
+## Text 108
 
 Carried by `httparse` 1.10.1.
 
@@ -7492,9 +7464,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 110
+## Text 109
 
-Carried by `hyper` 1.12.0, `unicase` 2.10.0.
+Carried by `hyper` 1.13.0, `unicase` 2.10.0.
 
 ```text
 Copyright (c) 2014-2026 Sean McArthur
@@ -7518,7 +7490,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 111
+## Text 110
 
 Carried by `hyper-rustls` 0.27.10, `rustls` 0.23.46.
 
@@ -7540,7 +7512,7 @@ ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ```
 
-## Text 112
+## Text 111
 
 Carried by `hyper-rustls` 0.27.10, `rustls` 0.23.46.
 
@@ -7572,7 +7544,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 113
+## Text 112
 
 Carried by `hyper-util` 0.1.21.
 
@@ -7598,9 +7570,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 114
+## Text 113
 
-Carried by `i-slint-backend-selector` 1.18.1, `i-slint-backend-winit` 1.18.1, `i-slint-common` 1.18.1, `i-slint-core` 1.18.1, `i-slint-renderer-skia` 1.18.1, `slint` 1.18.1.
+Carried by `i-slint-backend-selector` 1.19.1, `i-slint-backend-winit` 1.19.1, `i-slint-common` 1.19.1, `i-slint-core` 1.19.1, `i-slint-renderer-skia` 1.19.1, `slint` 1.19.1.
 
 ```text
 GNU GENERAL PUBLIC LICENSE
@@ -7837,9 +7809,9 @@ You should also get your employer (if you work as a programmer) or school, if an
 The GNU General Public License does not permit incorporating your program into proprietary programs. If your program is a subroutine library, you may consider it more useful to permit linking proprietary applications with the library. If this is what you want to do, use the GNU Lesser General Public License instead of this License. But first, please read <http://www.gnu.org/philosophy/why-not-lgpl.html>.
 ```
 
-## Text 115
+## Text 114
 
-Carried by `i-slint-backend-selector` 1.18.1, `i-slint-backend-winit` 1.18.1, `i-slint-common` 1.18.1, `i-slint-core` 1.18.1, `i-slint-renderer-skia` 1.18.1, `slint` 1.18.1.
+Carried by `i-slint-backend-selector` 1.19.1, `i-slint-backend-winit` 1.19.1, `i-slint-common` 1.19.1, `i-slint-core` 1.19.1, `i-slint-renderer-skia` 1.19.1, `slint` 1.19.1.
 
 ```text
 # Slint Royalty-free Desktop, Mobile, and Web Applications License
@@ -7887,9 +7859,9 @@ SixtyFPS is only liable for conflicting rights of third parties if SixtyFPS was 
 Unless required by law, SixtyFPS won't be liable for any direct, indirect, incidental, or consequential damages arising in any way out of the use of the Software.
 ```
 
-## Text 116
+## Text 115
 
-Carried by `i-slint-backend-selector` 1.18.1, `i-slint-backend-winit` 1.18.1, `i-slint-common` 1.18.1, `i-slint-core` 1.18.1, `i-slint-renderer-skia` 1.18.1, `slint` 1.18.1.
+Carried by `i-slint-backend-selector` 1.19.1, `i-slint-backend-winit` 1.19.1, `i-slint-common` 1.19.1, `i-slint-core` 1.19.1, `i-slint-renderer-skia` 1.19.1, `slint` 1.19.1.
 
 ```text
 # Slint Software License
@@ -8011,7 +7983,7 @@ The following can be purchased as an Add-On
 (c) GUI Test Framework.
 ```
 
-## Text 117
+## Text 116
 
 Carried by `iana-time-zone` 0.1.65.
 
@@ -8219,7 +8191,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 118
+## Text 117
 
 Carried by `iana-time-zone` 0.1.65.
 
@@ -8251,7 +8223,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 119
+## Text 118
 
 Carried by `idna_adapter` 1.2.2.
 
@@ -8283,7 +8255,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 120
+## Text 119
 
 Carried by `imagesize` 0.15.0.
 
@@ -8311,7 +8283,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 121
+## Text 120
 
 Carried by `indexmap` 2.14.2.
 
@@ -8343,7 +8315,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 122
+## Text 121
 
 Carried by `infer` 0.22.0.
 
@@ -8371,7 +8343,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 123
+## Text 122
 
 Carried by `ipnet` 2.12.2.
 
@@ -8579,7 +8551,7 @@ Apache License
    limitations under the License.
 ```
 
-## Text 124
+## Text 123
 
 Carried by `ipnet` 2.12.2.
 
@@ -8593,7 +8565,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 125
+## Text 124
 
 Carried by `json-patch` 4.2.0.
 
@@ -8621,7 +8593,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 126
+## Text 125
 
 Carried by `jsonptr` 0.7.1.
 
@@ -8829,7 +8801,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 127
+## Text 126
 
 Carried by `jsonptr` 0.7.1.
 
@@ -8857,7 +8829,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 128
+## Text 127
 
 Carried by `keyboard-types` 0.7.0, `keyboard-types` 0.8.3.
 
@@ -8883,7 +8855,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 129
+## Text 128
 
 Carried by `kurbo` 0.13.1, `polycool` 0.4.0.
 
@@ -8915,7 +8887,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 130
+## Text 129
 
 Carried by `libc` 0.2.191.
 
@@ -8947,7 +8919,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 131
+## Text 130
 
 Carried by `libloading` 0.8.9.
 
@@ -8966,7 +8938,7 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 THIS SOFTWARE.
 ```
 
-## Text 132
+## Text 131
 
 Carried by `libm` 0.2.16.
 
@@ -9231,9 +9203,9 @@ have been licensed under extremely permissive terms.
 Copyright notices are retained in src/* files where relevant.
 ```
 
-## Text 133
+## Text 132
 
-Carried by `libsqlite3-sys` 0.39.1, `rusqlite` 0.41.1.
+Carried by `libsqlite3-sys` 0.40.0, `rusqlite` 0.43.0.
 
 ```text
 Copyright (c) 2014 The rusqlite developers
@@ -9257,7 +9229,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 134
+## Text 133
 
 Carried by `lock_api` 0.4.14, `parking_lot` 0.12.5, `parking_lot_core` 0.9.12.
 
@@ -9289,9 +9261,9 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 135
+## Text 134
 
-Carried by `memmap2` 0.9.11.
+Carried by `memmap2` 0.9.12.
 
 ```text
 Apache License
@@ -9497,9 +9469,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 136
+## Text 135
 
-Carried by `memmap2` 0.9.11.
+Carried by `memmap2` 0.9.12.
 
 ```text
 Copyright (c) 2020 Yevhenii Reizner
@@ -9530,7 +9502,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 137
+## Text 136
 
 Carried by `memoffset` 0.9.1.
 
@@ -9556,9 +9528,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 138
+## Text 137
 
-Carried by `mime` 0.3.17.
+Carried by `mime` 0.3.18.
 
 ```text
 Copyright (c) 2014 Sean McArthur
@@ -9582,7 +9554,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 139
+## Text 138
 
 Carried by `minisign-verify` 0.3.0.
 
@@ -9648,7 +9620,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 140
+## Text 139
 
 Carried by `miniz_oxide` 0.8.9, `miniz_oxide` 0.9.1.
 
@@ -9660,6 +9632,37 @@ Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
 Copyright (c) 2017 Frommi
 Copyright (c) 2017-2024 oyvindln
 
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## Text 140
+
+Carried by `miniz_oxide` 0.8.9, `miniz_oxide` 0.9.1.
+
+```text
+MIT License
+
+Copyright 2013-2014 RAD Game Tools and Valve Software
+Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
+Copyright (c) 2017 Frommi
+Copyright (c) 2017-2024 oyvindln
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -9685,37 +9688,6 @@ SOFTWARE.
 Carried by `miniz_oxide` 0.8.9, `miniz_oxide` 0.9.1.
 
 ```text
-MIT License
-
-Copyright 2013-2014 RAD Game Tools and Valve Software
-Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
-Copyright (c) 2017 Frommi
-Copyright (c) 2017-2024 oyvindln
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-## Text 142
-
-Carried by `miniz_oxide` 0.8.9, `miniz_oxide` 0.9.1.
-
-```text
 Copyright 2013-2014 RAD Game Tools and Valve Software
 Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
 Copyright (c) 2020 Frommi
@@ -9732,9 +9704,9 @@ Permission is granted to anyone to use this software for any purpose, including 
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-## Text 143
+## Text 142
 
-Carried by `mio` 1.2.4.
+Carried by `mio` 1.2.5.
 
 ```text
 Copyright (c) 2014 Carl Lerche and other MIO contributors
@@ -9758,7 +9730,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 144
+## Text 143
 
 Carried by `moxcms` 0.8.1, `pxfm` 0.1.30.
 
@@ -9966,7 +9938,7 @@ Apache License
    limitations under the License.
 ```
 
-## Text 145
+## Text 144
 
 Carried by `moxcms` 0.8.1, `pxfm` 0.1.30.
 
@@ -9999,9 +9971,9 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## Text 146
+## Text 145
 
-Carried by `naga` 30.0.1, `naga-types` 30.0.1, `wgpu` 30.0.1, `wgpu-core` 30.0.1, `wgpu-core-deps-apple` 30.0.1, `wgpu-core-deps-windows-linux-android` 30.0.1, `wgpu-hal` 30.0.1, `wgpu-naga-bridge` 30.0.1, `wgpu-types` 30.0.1.
+Carried by `naga` 30.0.2, `naga-types` 30.0.2, `wgpu` 30.0.2, `wgpu-core` 30.0.2, `wgpu-core-deps-apple` 30.0.2, `wgpu-core-deps-windows-linux-android` 30.0.2, `wgpu-hal` 30.0.2, `wgpu-naga-bridge` 30.0.2, `wgpu-types` 30.0.2.
 
 ```text
 MIT License
@@ -10027,7 +9999,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 147
+## Text 146
 
 Carried by `num-conv` 0.2.2.
 
@@ -10053,7 +10025,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 148
+## Text 147
 
 Written out for `objc2-app-kit` 0.2.2, from the licence the manifest declares: the crate ships no licence file.
 
@@ -10081,7 +10053,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 149
+## Text 148
 
 Written out for `objc2-foundation` 0.2.2, `objc2-foundation` 0.3.2, from the licence the manifest declares: the crate ships no licence file.
 
@@ -10109,9 +10081,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 150
+## Text 149
 
-Carried by `open` 5.4.4.
+Carried by `open` 5.4.5.
 
 ```text
 The MIT License (MIT)
@@ -10141,7 +10113,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 151
+## Text 150
 
 Carried by `option-ext` 0.2.0.
 
@@ -10521,9 +10493,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   defined by the Mozilla Public License, v. 2.0.
 ```
 
-## Text 152
+## Text 151
 
-Carried by `ordered-float` 5.5.0.
+Carried by `ordered-float` 5.5.1.
 
 ```text
 Copyright (c) 2015 Jonathan Reem
@@ -10553,7 +10525,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 153
+## Text 152
 
 Carried by `os_pipe` 1.2.3, `shared_child` 1.1.2.
 
@@ -10579,7 +10551,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 154
+## Text 153
 
 Carried by `osakit` 0.3.1.
 
@@ -10611,9 +10583,9 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 155
+## Text 154
 
-Carried by `parlance` 0.1.1, `parley` 0.11.1, `parley_data` 0.11.1.
+Carried by `parlance` 0.1.1, `parley` 0.12.0, `parley_data` 0.12.0.
 
 ```text
 Copyright 2020 the Parley Authors
@@ -10643,7 +10615,73 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
+## Text 155
+
+Carried by `parley_emoji` 0.12.0.
+
+```text
+Copyright 2020 the Parley Authors
+Copyright (c) 2026 Christian Hansen <chansen@cpan.org>
+<https://github.com/chansen/c-emoji>
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+```
+
 ## Text 156
+
+Carried by `parley_engine` 0.12.0.
+
+```text
+Copyright 2025 the Parley Authors
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+```
+
+## Text 157
 
 Carried by `phf` 0.13.1, `phf_shared` 0.13.1.
 
@@ -10670,7 +10708,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 157
+## Text 158
 
 Carried by `pico-args` 0.5.0.
 
@@ -10696,7 +10734,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 158
+## Text 159
 
 Carried by `pin-utils` 0.1.1.
 
@@ -10904,7 +10942,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 159
+## Text 160
 
 Carried by `pin-utils` 0.1.1.
 
@@ -10936,7 +10974,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 160
+## Text 161
 
 Carried by `pin-weak` 1.1.0.
 
@@ -10962,9 +11000,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 161
+## Text 162
 
-Carried by `plist` 1.10.2.
+Carried by `plist` 1.10.4.
 
 ```text
 Copyright (c) 2015 Edward Barnard
@@ -10988,7 +11026,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 162
+## Text 163
 
 Carried by `png` 0.18.1.
 
@@ -11020,7 +11058,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 163
+## Text 164
 
 Carried by `powerfmt` 0.2.1.
 
@@ -11228,7 +11266,7 @@ Apache License
    limitations under the License.
 ```
 
-## Text 164
+## Text 165
 
 Carried by `powerfmt` 0.2.1.
 
@@ -11254,7 +11292,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 165
+## Text 166
 
 Carried by `presser` 0.3.1.
 
@@ -11286,7 +11324,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 166
+## Text 167
 
 Carried by `pulldown-cmark` 0.13.6.
 
@@ -11314,7 +11352,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 167
+## Text 168
 
 Carried by `quick-error` 2.0.1.
 
@@ -11340,7 +11378,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 168
+## Text 169
 
 Carried by `quick-xml` 0.42.0.
 
@@ -11370,7 +11408,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 169
+## Text 170
 
 Carried by `range-alloc` 0.1.5.
 
@@ -11398,7 +11436,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 170
+## Text 171
 
 Carried by `raw-window-handle` 0.6.2.
 
@@ -11426,7 +11464,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 171
+## Text 172
 
 Carried by `raw-window-handle` 0.6.2.
 
@@ -11444,7 +11482,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-## Text 172
+## Text 173
 
 Carried by `raw-window-metal` 1.1.0, `siphasher` 1.0.4.
 
@@ -11468,7 +11506,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 173
+## Text 174
 
 Carried by `renderdoc-sys` 1.1.0.
 
@@ -11500,7 +11538,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 174
+## Text 175
 
 Carried by `reqwest` 0.13.5.
 
@@ -11708,7 +11746,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 175
+## Text 176
 
 Carried by `reqwest` 0.13.5.
 
@@ -11734,9 +11772,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 176
+## Text 177
 
-Carried by `resvg` 0.48.1, `usvg` 0.48.1.
+Carried by `resvg` 0.49.0, `usvg` 0.49.0.
 
 ```text
 Copyright 2017 the Resvg Authors
@@ -11766,9 +11804,9 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 177
+## Text 178
 
-Carried by `rfd` 0.16.0.
+Carried by `rfd` 0.17.2.
 
 ```text
 MIT License
@@ -11794,7 +11832,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 178
+## Text 179
 
 Carried by `rgb` 0.8.53.
 
@@ -11822,7 +11860,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 179
+## Text 180
 
 Carried by `ring` 0.17.14.
 
@@ -11838,7 +11876,7 @@ See src/polyfill/once_cell/LICENSE-APACHE and src/polyfill/once_cell/LICENSE-MIT
 for the license to code that was sourced from the once_cell project.
 ```
 
-## Text 180
+## Text 181
 
 Carried by `ring` 0.17.14.
 
@@ -12116,7 +12154,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## Text 181
+## Text 182
 
 Carried by `ring` 0.17.14.
 
@@ -12136,9 +12174,9 @@ OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
 
-## Text 182
+## Text 183
 
-Carried by `roxmltree` 0.21.1.
+Carried by `roxmltree` 0.21.2.
 
 ```text
 The MIT License (MIT)
@@ -12164,9 +12202,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 183
+## Text 184
 
-Carried by `rustix` 1.1.5.
+Carried by `rustix` 1.1.6.
 
 ```text
 Apache License
@@ -12389,9 +12427,9 @@ the License, but only in their entirety and only with respect to the Combined
 Software.
 ```
 
-## Text 184
+## Text 185
 
-Carried by `rustls-pki-types` 1.15.1.
+Carried by `rustls-pki-types` 1.16.0.
 
 ```text
 Apache License
@@ -12597,9 +12635,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 185
+## Text 186
 
-Carried by `rustls-pki-types` 1.15.1.
+Carried by `rustls-pki-types` 1.16.0.
 
 ```text
 Copyright (c) 2023 Dirkjan Ochtman <dirkjan@ochtman.nl>
@@ -12629,7 +12667,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 186
+## Text 187
 
 Carried by `rustls-platform-verifier` 0.7.1.
 
@@ -12657,9 +12695,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 187
+## Text 188
 
-Carried by `rustls-webpki` 0.103.16.
+Carried by `rustls-webpki` 0.103.17.
 
 ```text
 Except as otherwise noted, this project is licensed under the following
@@ -12683,7 +12721,7 @@ The files under third-party/chromium are licensed as described in
 third-party/chromium/LICENSE.
 ```
 
-## Text 188
+## Text 189
 
 Carried by `same-file` 1.0.6, `winapi-util` 0.1.11.
 
@@ -12711,7 +12749,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 189
+## Text 190
 
 Carried by `scoped-tls-hkt` 0.1.5.
 
@@ -12743,7 +12781,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 190
+## Text 191
 
 Carried by `scopeguard` 1.2.0.
 
@@ -12775,7 +12813,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 191
+## Text 192
 
 Carried by `security-framework` 3.7.0, `security-framework-sys` 2.17.0.
 
@@ -12802,9 +12840,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 192
+## Text 193
 
-Carried by `serde_spanned` 1.1.2, `toml` 1.1.8+spec-1.1.0, `toml_datetime` 1.1.2+spec-1.1.0, `toml_parser` 1.1.5+spec-1.1.0, `toml_writer` 1.1.3+spec-1.1.0.
+Carried by `serde_spanned` 1.1.3, `toml` 1.2.3+spec-1.1.0, `toml_datetime` 1.1.3+spec-1.1.0, `toml_parser` 1.1.7+spec-1.1.0, `toml_writer` 1.2.0+spec-1.1.0.
 
 ```text
 Apache License
@@ -13010,9 +13048,9 @@ Apache License
    limitations under the License.
 ```
 
-## Text 193
+## Text 194
 
-Carried by `serde_spanned` 1.1.2, `toml` 1.1.8+spec-1.1.0, `toml_datetime` 1.1.2+spec-1.1.0, `toml_parser` 1.1.5+spec-1.1.0, `toml_writer` 1.1.3+spec-1.1.0.
+Carried by `serde_spanned` 1.1.3, `toml` 1.2.3+spec-1.1.0, `toml_datetime` 1.1.3+spec-1.1.0, `toml_parser` 1.1.7+spec-1.1.0, `toml_writer` 1.2.0+spec-1.1.0.
 
 ```text
 Copyright (c) Individual contributors
@@ -13034,38 +13072,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-```
-
-## Text 194
-
-Carried by `serde_with` 3.24.0.
-
-```text
-Copyright (c) 2015
-
-Permission is hereby granted, free of charge, to any
-person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the
-Software without restriction, including without
-limitation the rights to use, copy, modify, merge,
-publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software
-is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice
-shall be included in all copies or substantial portions
-of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
-ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
-TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
-IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
 ```
 
 ## Text 195
@@ -13140,7 +13146,7 @@ option.
 
 ## Text 198
 
-Written out for `skia-bindings` 0.153.3, from the licence the manifest declares: the crate ships no licence file.
+Written out for `skia-bindings` 0.157.0, from the licence the manifest declares: the crate ships no licence file.
 
 ```text
 MIT License
@@ -13168,7 +13174,7 @@ SOFTWARE.
 
 ## Text 199
 
-Written out for `skia-safe` 0.153.3, from the licence the manifest declares: the crate ships no licence file.
+Written out for `skia-safe` 0.157.0, from the licence the manifest declares: the crate ships no licence file.
 
 ```text
 MIT License
@@ -13254,7 +13260,7 @@ the following restrictions:
 
 ## Text 202
 
-Carried by `smallvec` 1.16.3.
+Carried by `smallvec` 1.16.6.
 
 ```text
 Copyright (c) 2018 The Servo Project Developers
@@ -13462,7 +13468,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Text 209
 
-Carried by `svgtypes` 0.16.1.
+Carried by `svgtypes` 0.16.2.
 
 ```text
 Copyright (c) 2018 Yevhenii Reizner
@@ -13928,7 +13934,7 @@ DEALINGS IN THE SOFTWARE.
 
 ## Text 213
 
-Written out for `taffy` 0.10.1, from the licence the manifest declares: the crate ships no licence file.
+Written out for `taffy` 0.15.1, from the licence the manifest declares: the crate ships no licence file.
 
 ```text
 MIT License
@@ -13988,7 +13994,7 @@ DEALINGS IN THE SOFTWARE.
 
 ## Text 215
 
-Carried by `tauri` 2.12.5, `tauri-plugin-dialog` 2.8.3, `tauri-plugin-fs` 2.7.1, `tauri-plugin-global-shortcut` 2.4.1, `tauri-plugin-opener` 2.7.2, `tauri-plugin-shell` 2.5.0, `tauri-plugin-updater` 2.14.0, `tauri-runtime` 2.12.2, `tauri-runtime-wry` 2.12.3, `tauri-utils` 2.10.2.
+Carried by `tauri` 2.12.7, `tauri-plugin-dialog` 2.8.4, `tauri-plugin-fs` 2.7.1, `tauri-plugin-global-shortcut` 2.4.1, `tauri-plugin-opener` 2.7.3, `tauri-plugin-shell` 2.6.0, `tauri-plugin-updater` 2.14.1, `tauri-runtime` 2.12.4, `tauri-runtime-wry` 2.12.5, `tauri-utils` 2.10.4.
 
 ```text
 MIT License
@@ -14016,7 +14022,7 @@ SOFTWARE.
 
 ## Text 216
 
-Carried by `tauri-plugin-single-instance` 2.5.4.
+Carried by `tauri-plugin-single-instance` 2.5.5.
 
 ```text
 MIT License
@@ -14044,7 +14050,7 @@ SOFTWARE.
 
 ## Text 217
 
-Carried by `tempfile` 3.27.0, `xattr` 1.6.1.
+Carried by `tempfile` 3.27.0, `xattr` 1.7.0.
 
 ```text
 Copyright (c) 2015 Steven Allen
@@ -14558,6 +14564,38 @@ THE SOFTWARE.
 
 ## Text 228
 
+Carried by `unicode-bidi` 0.3.18, `unicode-normalization` 0.1.26, `unicode-segmentation` 1.13.3, `unicode-width` 0.2.3.
+
+```text
+Copyright (c) 2015 The Rust Project Developers
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+```
+
+## Text 229
+
 Carried by `unicode-ident` 1.0.27, `unicode-normalization` 0.1.26.
 
 ```text
@@ -14602,9 +14640,9 @@ dealings in these Data Files or Software without prior written
 authorization of the copyright holder.
 ```
 
-## Text 229
+## Text 230
 
-Carried by `unicode-script` 0.5.8.
+Carried by `unicode-script` 0.5.9.
 
 ```text
 Apache License
@@ -14810,9 +14848,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 230
+## Text 231
 
-Carried by `unicode-script` 0.5.8.
+Carried by `unicode-script` 0.5.9.
 
 ```text
 MIT License
@@ -14844,7 +14882,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 231
+## Text 232
 
 Carried by `untrusted` 0.9.0.
 
@@ -14864,7 +14902,7 @@ Carried by `untrusted` 0.9.0.
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
 
-## Text 232
+## Text 233
 
 Carried by `urlpattern` 0.6.0.
 
@@ -14892,9 +14930,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 233
+## Text 234
 
-Carried by `uuid` 1.28.0.
+Carried by `uuid` 1.29.3.
 
 ```text
 Copyright (c) 2014 The Rust Project Developers
@@ -14925,7 +14963,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 234
+## Text 235
 
 Carried by `want` 0.3.2.
 
@@ -14951,7 +14989,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 235
+## Text 236
 
 Carried by `web-time` 1.1.0.
 
@@ -15159,7 +15197,7 @@ Apache License
    limitations under the License.
 ```
 
-## Text 236
+## Text 237
 
 Carried by `web-time` 1.1.0.
 
@@ -15187,9 +15225,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 237
+## Text 238
 
-Carried by `webbrowser` 1.2.4.
+Carried by `webbrowser` 1.2.7.
 
 ```text
 Apache License
@@ -15384,9 +15422,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-## Text 238
+## Text 239
 
-Carried by `webbrowser` 1.2.4.
+Carried by `webbrowser` 1.2.7.
 
 ```text
 The MIT License (MIT)
@@ -15418,7 +15456,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 239
+## Text 240
 
 Written out for `webview2-com` 0.39.1, from the licence the manifest declares: the crate ships no licence file.
 
@@ -15446,7 +15484,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 240
+## Text 241
 
 Written out for `webview2-com-sys` 0.39.1, from the licence the manifest declares: the crate ships no licence file.
 
@@ -15474,7 +15512,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 241
+## Text 242
 
 Carried by `weezl` 0.1.12.
 
@@ -15502,7 +15540,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 242
+## Text 243
 
 Carried by `window-vibrancy` 0.8.1.
 
@@ -15530,9 +15568,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 243
+## Text 244
 
-Carried by `windows` 0.62.2, `windows-collections` 0.3.2, `windows-core` 0.62.2, `windows-future` 0.3.2, `windows-link` 0.2.1, `windows-numerics` 0.3.1, `windows-registry` 0.6.1, `windows-result` 0.4.1, `windows-strings` 0.5.1, `windows-sys` 0.45.0, `windows-sys` 0.48.0, `windows-sys` 0.52.0, `windows-sys` 0.59.0, `windows-sys` 0.60.2, `windows-sys` 0.61.2, `windows-targets` 0.42.2, `windows-targets` 0.48.5, `windows-targets` 0.52.6, `windows-targets` 0.53.5, `windows-threading` 0.2.1, `windows-version` 0.1.7, `windows_x86_64_msvc` 0.42.2, `windows_x86_64_msvc` 0.48.5, `windows_x86_64_msvc` 0.52.6, `windows_x86_64_msvc` 0.53.1.
+Carried by `windows` 0.62.2, `windows-collections` 0.3.2, `windows-core` 0.62.2, `windows-future` 0.3.2, `windows-link` 0.2.1, `windows-numerics` 0.3.1, `windows-registry` 0.6.1, `windows-result` 0.4.1, `windows-strings` 0.5.1, `windows-sys` 0.52.0, `windows-sys` 0.59.0, `windows-sys` 0.60.2, `windows-sys` 0.61.2, `windows-targets` 0.52.6, `windows-targets` 0.53.5, `windows-threading` 0.2.1, `windows-version` 0.1.7, `windows_x86_64_msvc` 0.52.6, `windows_x86_64_msvc` 0.53.1.
 
 ```text
 Apache License
@@ -15738,9 +15776,9 @@ Apache License
    limitations under the License.
 ```
 
-## Text 244
+## Text 245
 
-Carried by `windows` 0.62.2, `windows-collections` 0.3.2, `windows-core` 0.62.2, `windows-future` 0.3.2, `windows-link` 0.2.1, `windows-numerics` 0.3.1, `windows-registry` 0.6.1, `windows-result` 0.4.1, `windows-strings` 0.5.1, `windows-sys` 0.45.0, `windows-sys` 0.48.0, `windows-sys` 0.52.0, `windows-sys` 0.59.0, `windows-sys` 0.60.2, `windows-sys` 0.61.2, `windows-targets` 0.42.2, `windows-targets` 0.48.5, `windows-targets` 0.52.6, `windows-targets` 0.53.5, `windows-threading` 0.2.1, `windows-version` 0.1.7, `windows_x86_64_msvc` 0.42.2, `windows_x86_64_msvc` 0.48.5, `windows_x86_64_msvc` 0.52.6, `windows_x86_64_msvc` 0.53.1.
+Carried by `windows` 0.62.2, `windows-collections` 0.3.2, `windows-core` 0.62.2, `windows-future` 0.3.2, `windows-link` 0.2.1, `windows-numerics` 0.3.1, `windows-registry` 0.6.1, `windows-result` 0.4.1, `windows-strings` 0.5.1, `windows-sys` 0.52.0, `windows-sys` 0.59.0, `windows-sys` 0.60.2, `windows-sys` 0.61.2, `windows-targets` 0.52.6, `windows-targets` 0.53.5, `windows-threading` 0.2.1, `windows-version` 0.1.7, `windows_x86_64_msvc` 0.52.6, `windows_x86_64_msvc` 0.53.1.
 
 ```text
 MIT License
@@ -15766,9 +15804,9 @@ MIT License
     SOFTWARE
 ```
 
-## Text 245
+## Text 246
 
-Carried by `winnow` 1.0.4.
+Carried by `winnow` 1.0.5.
 
 ```text
 Permission is hereby granted, free of charge, to any person obtaining
@@ -15791,7 +15829,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 246
+## Text 247
 
 Carried by `winreg` 0.56.0.
 
@@ -15817,9 +15855,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## Text 247
+## Text 248
 
-Carried by `wry` 0.57.0.
+Carried by `wry` 0.57.4.
 
 ```text
 MIT License
@@ -15845,7 +15883,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 248
+## Text 249
 
 Carried by `xmlwriter` 0.1.0.
 
@@ -15873,9 +15911,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 249
+## Text 250
 
-Carried by `zerocopy` 0.8.63.
+Carried by `zerocopy` 0.8.66.
 
 ```text
 Apache License
@@ -16081,9 +16119,9 @@ Apache License
    limitations under the License.
 ```
 
-## Text 250
+## Text 251
 
-Carried by `zerocopy` 0.8.63.
+Carried by `zerocopy` 0.8.66.
 
 ```text
 Copyright 2019 The Fuchsia Authors.
@@ -16112,9 +16150,9 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## Text 251
+## Text 252
 
-Carried by `zerocopy` 0.8.63.
+Carried by `zerocopy` 0.8.66.
 
 ```text
 Copyright 2023 The Fuchsia Authors
@@ -16144,9 +16182,9 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 252
+## Text 253
 
-Carried by `zeroize` 1.9.1.
+Carried by `zeroize` 1.9.2.
 
 ```text
 Copyright (c) 2018-2026 The RustCrypto Project Developers
@@ -16176,7 +16214,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-## Text 253
+## Text 254
 
 Carried by `zune-core` 0.5.3, `zune-jpeg` 0.5.15.
 
@@ -16204,7 +16242,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Text 254
+## Text 255
 
 Carried by `zune-core` 0.5.3, `zune-jpeg` 0.5.15.
 

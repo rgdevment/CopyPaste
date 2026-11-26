@@ -55,6 +55,8 @@ pub struct Floated {
     pub stays_when_left: bool,
     pub appears_at_once: bool,
     pub took_the_keys: bool,
+    pub lingers_without_the_keys: bool,
+    pub keys_come_back: bool,
     pub counts_as_ours: bool,
     pub back_as_it_was: bool,
 }
@@ -167,6 +169,10 @@ pub fn a_panel_would_float() -> Option<Floated> {
     let view = window.contentView()?;
     let at = NonNull::from(&*view).cast();
     let took_the_keys = keys_without_activating(at);
+    let counts_as_ours = crate::activation::is_ours_up_front() == Some(true);
+    let lingers_without_the_keys = keyless(at, true) && !window.canBecomeKeyWindow();
+    keyless(at, false);
+    let keys_come_back = window.canBecomeKeyWindow();
     let behaviour = window.collectionBehavior();
     let floated = Floated {
         became_a_panel: window.isKindOfClass(Floating::class()),
@@ -178,7 +184,9 @@ pub fn a_panel_would_float() -> Option<Floated> {
         stays_when_left: !window.hidesOnDeactivate(),
         appears_at_once: window.animationBehavior() == NSWindowAnimationBehavior::None,
         took_the_keys,
-        counts_as_ours: crate::activation::is_ours_up_front() == Some(true),
+        lingers_without_the_keys,
+        keys_come_back,
+        counts_as_ours,
         back_as_it_was: grounded(at) && !window.isKindOfClass(Floating::class()),
     };
     window.orderOut(None);

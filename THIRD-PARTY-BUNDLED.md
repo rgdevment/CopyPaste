@@ -25,10 +25,10 @@ with the crates that carry it.
 
 | Package | Version | Licence |
 | --- | --- | --- |
-| `@tauri-apps/api` | 2.12.4 | Apache-2.0 OR MIT |
-| `@tauri-apps/plugin-dialog` | 2.8.3 | MIT OR Apache-2.0 |
-| `@tauri-apps/plugin-opener` | 2.7.2 | MIT OR Apache-2.0 |
-| `argparse` | 3.0.3 | PSF-2.0 |
+| `@tauri-apps/api` | 2.12.5 | Apache-2.0 OR MIT |
+| `@tauri-apps/plugin-dialog` | 2.8.4 | MIT OR Apache-2.0 |
+| `@tauri-apps/plugin-opener` | 2.7.3 | MIT OR Apache-2.0 |
+| `argparse` | 3.0.4 | PSF-2.0 |
 | `entities` | 8.1.0 | BSD-2-Clause |
 | `linkify-it` | 6.1.0 | MIT |
 | `markdown-it` | 15.0.3 | MIT |
@@ -39,26 +39,25 @@ with the crates that carry it.
 | `scheduler` | 0.28.0 | MIT |
 | `uc.micro` | 3.0.0 | MIT |
 
-## In the core (431 crates)
+## In the core (428 crates)
 
 | Crate | Version | Licence |
 | --- | --- | --- |
-| `accesskit` | 0.24.1 | MIT OR Apache-2.0 |
-| `accesskit_consumer` | 0.38.0 | MIT OR Apache-2.0 |
-| `accesskit_macos` | 0.26.3 | MIT OR Apache-2.0 |
-| `accesskit_windows` | 0.34.0 | MIT OR Apache-2.0 |
-| `accesskit_winit` | 0.33.2 | Apache-2.0 |
+| `accesskit` | 0.25.2 | MIT OR Apache-2.0 |
+| `accesskit_consumer` | 0.39.2 | MIT OR Apache-2.0 |
+| `accesskit_macos` | 0.27.2 | MIT OR Apache-2.0 |
+| `accesskit_windows` | 0.35.2 | MIT OR Apache-2.0 |
+| `accesskit_winit` | 0.34.2 | Apache-2.0 |
 | `adler2` | 2.0.1 | 0BSD OR MIT OR Apache-2.0 |
 | `aho-corasick` | 1.1.5 | Unlicense OR MIT |
 | `alloc-no-stdlib` | 3.0.0 | BSD-3-Clause |
 | `alloc-stdlib` | 0.3.0 | BSD-3-Clause |
 | `allocator-api2` | 0.2.21 | MIT OR Apache-2.0 |
-| `anyhow` | 1.0.104 | MIT OR Apache-2.0 |
+| `anyhow` | 1.0.105 | MIT OR Apache-2.0 |
 | `arboard` | 3.7.0 | MIT OR Apache-2.0 |
 | `arrayref` | 0.3.9 | BSD-2-Clause |
 | `arrayvec` | 0.7.8 | MIT OR Apache-2.0 |
 | `atomic-waker` | 1.1.2 | Apache-2.0 OR MIT |
-| `base64` | 0.22.1 | MIT OR Apache-2.0 |
 | `base64` | 0.23.1 | MIT OR Apache-2.0 |
 | `bit-set` | 0.10.0 | Apache-2.0 OR MIT |
 | `bit-vec` | 0.9.1 | Apache-2.0 OR MIT |
@@ -67,11 +66,11 @@ with the crates that carry it.
 | `blake3` | 1.8.7 | CC0-1.0 OR Apache-2.0 OR Apache-2.0 WITH LLVM-exception |
 | `block2` | 0.5.1 | MIT |
 | `block2` | 0.6.2 | MIT |
-| `brotli` | 9.0.0 | BSD-3-Clause AND MIT |
-| `brotli-decompressor` | 6.0.1 | BSD-3-Clause/MIT |
+| `brotli` | 9.1.3 | BSD-3-Clause AND MIT |
+| `brotli-decompressor` | 6.4.0 | BSD-3-Clause/MIT |
 | `bytemuck` | 1.25.2 | Zlib OR Apache-2.0 OR MIT |
 | `byteorder-lite` | 0.1.0 | Unlicense OR MIT |
-| `bytes` | 1.12.1 | MIT |
+| `bytes` | 1.12.2 | MIT |
 | `cfb` | 0.14.0 | MIT |
 | `cfg-if` | 1.0.5 | MIT OR Apache-2.0 |
 | `cgl` | 0.3.2 | MIT / Apache-2.0 |
@@ -82,7 +81,7 @@ with the crates that carry it.
 | `color_quant` | 1.1.0 | MIT |
 | `const-field-offset` | 0.2.1 | MIT OR Apache-2.0 |
 | `constant_time_eq` | 0.4.2 | CC0-1.0 OR MIT-0 OR Apache-2.0 |
-| `cookie` | 0.18.2 | MIT OR Apache-2.0 |
+| `cookie` | 0.18.3 | MIT OR Apache-2.0 |
 | `core-foundation` | 0.10.1 | MIT OR Apache-2.0 |
 | `core-foundation` | 0.9.4 | MIT OR Apache-2.0 |
 | `core-foundation-sys` | 0.8.7 | MIT OR Apache-2.0 |
@@ -92,11 +91,11 @@ with the crates that carry it.
 | `core-graphics-types` | 0.2.0 | MIT OR Apache-2.0 |
 | `core_detect` | 1.0.0 | MIT/Apache-2.0 |
 | `cpufeatures` | 0.3.1 | MIT OR Apache-2.0 |
-| `crc32fast` | 1.5.3 | MIT OR Apache-2.0 |
+| `crc32fast` | 1.5.6 | MIT OR Apache-2.0 |
 | `critical-section` | 1.2.0 | MIT OR Apache-2.0 |
 | `crossbeam-channel` | 0.5.17 | MIT OR Apache-2.0 |
 | `crossbeam-utils` | 0.8.23 | MIT OR Apache-2.0 |
-| `ctor` | 1.0.13 | Apache-2.0 OR MIT |
+| `ctor` | 1.0.14 | Apache-2.0 OR MIT |
 | `cursor-icon` | 1.2.0 | MIT OR Apache-2.0 OR Zlib |
 | `data-url` | 0.3.2 | MIT OR Apache-2.0 |
 | `deranged` | 0.5.9 | MIT OR Apache-2.0 |
@@ -107,11 +106,12 @@ with the crates that carry it.
 | `dispatch2` | 0.3.1 | Zlib OR Apache-2.0 OR MIT |
 | `dpi` | 0.1.2 | Apache-2.0 AND MIT |
 | `dunce` | 1.0.5 | CC0-1.0 OR MIT-0 OR Apache-2.0 |
+| `either` | 1.19.0 | MIT OR Apache-2.0 |
 | `embed_plist` | 1.2.2 | MIT OR Apache-2.0 |
-| `encoding_rs` | 0.8.42 | (Apache-2.0 OR MIT) AND BSD-3-Clause |
+| `encoding_rs` | 0.8.44 | (Apache-2.0 OR MIT) AND BSD-3-Clause |
 | `equivalent` | 1.0.3 | Apache-2.0 OR MIT |
-| `erased-serde` | 0.4.10 | MIT OR Apache-2.0 |
-| `errno` | 0.3.14 | MIT OR Apache-2.0 |
+| `erased-serde` | 0.4.11 | MIT OR Apache-2.0 |
+| `errno` | 0.3.15 | MIT OR Apache-2.0 |
 | `error-code` | 3.4.0 | BSL-1.0 |
 | `euclid` | 0.22.14 | MIT OR Apache-2.0 |
 | `extended` | 0.1.0 | MIT |
@@ -121,18 +121,18 @@ with the crates that carry it.
 | `fax` | 0.2.7 | MIT |
 | `fdeflate` | 0.3.7 | MIT OR Apache-2.0 |
 | `field-offset` | 0.3.6 | MIT OR Apache-2.0 |
-| `filetime` | 0.2.29 | MIT/Apache-2.0 |
-| `fixed_decimal` | 0.7.2 | Unicode-3.0 |
-| `flate2` | 1.1.10 | MIT OR Apache-2.0 |
+| `filetime` | 0.2.30 | MIT/Apache-2.0 |
+| `fixed_decimal` | 0.7.3 | Unicode-3.0 |
+| `flate2` | 1.1.11 | MIT OR Apache-2.0 |
 | `float-cmp` | 0.9.0 | MIT |
 | `fnv` | 1.0.7 | Apache-2.0 / MIT |
 | `foldhash` | 0.2.0 | Zlib |
 | `font-types` | 0.12.7 | MIT OR Apache-2.0 |
 | `fontdb` | 0.24.0 | MIT |
-| `fontique` | 0.11.1 | Apache-2.0 OR MIT |
+| `fontique` | 0.12.0 | Apache-2.0 OR MIT |
 | `foreign-types` | 0.5.0 | MIT/Apache-2.0 |
 | `foreign-types-shared` | 0.3.1 | MIT/Apache-2.0 |
-| `form_urlencoded` | 1.2.2 | MIT OR Apache-2.0 |
+| `form_urlencoded` | 1.2.3 | MIT OR Apache-2.0 |
 | `futures-channel` | 0.3.34 | MIT OR Apache-2.0 |
 | `futures-core` | 0.3.34 | MIT OR Apache-2.0 |
 | `futures-sink` | 0.3.34 | MIT OR Apache-2.0 |
@@ -152,36 +152,35 @@ with the crates that carry it.
 | `half` | 2.7.1 | MIT OR Apache-2.0 |
 | `harfrust` | 0.12.0 | MIT |
 | `hashbrown` | 0.16.1 | MIT OR Apache-2.0 |
-| `hashbrown` | 0.17.1 | MIT OR Apache-2.0 |
+| `hashbrown` | 0.17.2 | MIT OR Apache-2.0 |
 | `hashlink` | 0.12.2 | MIT OR Apache-2.0 |
-| `heck` | 0.5.0 | MIT OR Apache-2.0 |
 | `htmlparser` | 0.2.1 | MIT OR Apache-2.0 |
 | `http` | 1.5.0 | MIT OR Apache-2.0 |
 | `http-body` | 1.1.0 | MIT |
 | `http-body-util` | 0.1.5 | MIT |
 | `httparse` | 1.10.1 | MIT OR Apache-2.0 |
-| `hyper` | 1.12.0 | MIT |
+| `hyper` | 1.13.0 | MIT |
 | `hyper-rustls` | 0.27.10 | Apache-2.0 OR ISC OR MIT |
 | `hyper-util` | 0.1.21 | MIT |
-| `i-slint-backend-selector` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
-| `i-slint-backend-winit` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
-| `i-slint-common` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
-| `i-slint-core` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
-| `i-slint-renderer-skia` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
+| `i-slint-backend-selector` | 1.19.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
+| `i-slint-backend-winit` | 1.19.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
+| `i-slint-common` | 1.19.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
+| `i-slint-core` | 1.19.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
+| `i-slint-renderer-skia` | 1.19.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `iana-time-zone` | 0.1.65 | MIT OR Apache-2.0 |
-| `icu_collections` | 2.3.0 | Unicode-3.0 |
-| `icu_decimal` | 2.3.0 | Unicode-3.0 |
-| `icu_decimal_data` | 2.3.0 | Unicode-3.0 |
-| `icu_locale_core` | 2.3.0 | Unicode-3.0 |
-| `icu_locale_fallback` | 2.3.0 | Unicode-3.0 |
-| `icu_locale_fallback_data` | 2.3.0 | Unicode-3.0 |
-| `icu_normalizer` | 2.3.0 | Unicode-3.0 |
-| `icu_normalizer_data` | 2.3.0 | Unicode-3.0 |
-| `icu_properties` | 2.3.0 | Unicode-3.0 |
-| `icu_properties_data` | 2.3.0 | Unicode-3.0 |
-| `icu_provider` | 2.3.1 | Unicode-3.0 |
-| `icu_segmenter` | 2.3.0 | Unicode-3.0 |
-| `icu_segmenter_data` | 2.3.0 | Unicode-3.0 |
+| `icu_collections` | 2.4.0 | Unicode-3.0 |
+| `icu_decimal` | 2.4.0 | Unicode-3.0 |
+| `icu_decimal_data` | 2.4.0 | Unicode-3.0 |
+| `icu_locale_core` | 2.4.0 | Unicode-3.0 |
+| `icu_locale_fallback` | 2.4.0 | Unicode-3.0 |
+| `icu_locale_fallback_data` | 2.4.0 | Unicode-3.0 |
+| `icu_normalizer` | 2.4.0 | Unicode-3.0 |
+| `icu_normalizer_data` | 2.4.0 | Unicode-3.0 |
+| `icu_properties` | 2.4.0 | Unicode-3.0 |
+| `icu_properties_data` | 2.4.0 | Unicode-3.0 |
+| `icu_provider` | 2.4.0 | Unicode-3.0 |
+| `icu_segmenter` | 2.4.0 | Unicode-3.0 |
+| `icu_segmenter_data` | 2.4.0 | Unicode-3.0 |
 | `idna` | 1.1.0 | MIT OR Apache-2.0 |
 | `idna_adapter` | 1.2.2 | Apache-2.0 OR MIT |
 | `image` | 0.25.10 | MIT OR Apache-2.0 |
@@ -190,7 +189,8 @@ with the crates that carry it.
 | `indexmap` | 2.14.2 | Apache-2.0 OR MIT |
 | `infer` | 0.22.0 | MIT |
 | `ipnet` | 2.12.2 | MIT OR Apache-2.0 |
-| `itoa` | 1.0.18 | MIT OR Apache-2.0 |
+| `itertools` | 0.15.0 | MIT OR Apache-2.0 |
+| `itoa` | 1.0.19 | MIT OR Apache-2.0 |
 | `json-patch` | 4.2.0 | MIT/Apache-2.0 |
 | `jsonptr` | 0.7.1 | MIT OR Apache-2.0 |
 | `keyboard-types` | 0.7.0 | MIT OR Apache-2.0 |
@@ -200,28 +200,28 @@ with the crates that carry it.
 | `libc` | 0.2.191 | MIT OR Apache-2.0 |
 | `libloading` | 0.8.9 | ISC |
 | `libm` | 0.2.16 | MIT |
-| `libsqlite3-sys` | 0.39.1 | MIT |
+| `libsqlite3-sys` | 0.40.0 | MIT |
 | `linebender_resource_handle` | 0.1.1 | Apache-2.0 OR MIT |
 | `litemap` | 0.8.3 | Unicode-3.0 |
 | `lock_api` | 0.4.14 | MIT OR Apache-2.0 |
-| `log` | 0.4.34 | MIT OR Apache-2.0 |
+| `log` | 0.4.35 | MIT OR Apache-2.0 |
 | `lyon_algorithms` | 1.0.22 | MIT OR Apache-2.0 |
 | `lyon_extra` | 1.1.0 | MIT OR Apache-2.0 |
 | `lyon_geom` | 1.0.20 | MIT OR Apache-2.0 |
 | `lyon_path` | 1.0.19 | MIT OR Apache-2.0 |
 | `memchr` | 2.8.3 | Unlicense OR MIT |
-| `memmap2` | 0.9.11 | MIT OR Apache-2.0 |
+| `memmap2` | 0.9.12 | MIT OR Apache-2.0 |
 | `memoffset` | 0.9.1 | MIT |
-| `mime` | 0.3.17 | MIT OR Apache-2.0 |
+| `mime` | 0.3.18 | MIT OR Apache-2.0 |
 | `minisign-verify` | 0.3.0 | MIT |
 | `miniz_oxide` | 0.8.9 | MIT OR Zlib OR Apache-2.0 |
 | `miniz_oxide` | 0.9.1 | MIT OR Zlib OR Apache-2.0 |
-| `mio` | 1.2.4 | MIT |
+| `mio` | 1.2.5 | MIT |
 | `moxcms` | 0.8.1 | BSD-3-Clause OR Apache-2.0 |
-| `muda` | 0.19.3 | Apache-2.0 OR MIT |
 | `muda` | 0.20.0 | Apache-2.0 OR MIT |
-| `naga` | 30.0.1 | MIT OR Apache-2.0 |
-| `naga-types` | 30.0.1 | MIT OR Apache-2.0 |
+| `muda` | 0.21.2 | Apache-2.0 OR MIT |
+| `naga` | 30.0.2 | MIT OR Apache-2.0 |
+| `naga-types` | 30.0.2 | MIT OR Apache-2.0 |
 | `num-complex` | 0.4.6 | MIT OR Apache-2.0 |
 | `num-conv` | 0.2.2 | MIT OR Apache-2.0 |
 | `num-traits` | 0.2.19 | MIT OR Apache-2.0 |
@@ -257,25 +257,27 @@ with the crates that carry it.
 | `objc2-vision` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `objc2-web-kit` | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | `once_cell` | 1.21.4 | MIT OR Apache-2.0 |
-| `open` | 5.4.4 | MIT |
+| `open` | 5.4.5 | MIT |
 | `option-ext` | 0.2.0 | MPL-2.0 |
-| `ordered-float` | 5.5.0 | MIT |
+| `ordered-float` | 5.5.1 | MIT |
 | `os_pipe` | 1.2.3 | MIT |
 | `osakit` | 0.3.1 | MIT OR Apache-2.0 |
 | `parking_lot` | 0.12.5 | MIT OR Apache-2.0 |
 | `parking_lot_core` | 0.9.12 | MIT OR Apache-2.0 |
 | `parlance` | 0.1.1 | Apache-2.0 OR MIT |
-| `parley` | 0.11.1 | Apache-2.0 OR MIT |
-| `parley_data` | 0.11.1 | Apache-2.0 OR MIT |
+| `parley` | 0.12.0 | Apache-2.0 OR MIT |
+| `parley_data` | 0.12.0 | Apache-2.0 OR MIT |
+| `parley_emoji` | 0.12.0 | MIT |
+| `parley_engine` | 0.12.0 | Apache-2.0 OR MIT |
 | `percent-encoding` | 2.3.2 | MIT OR Apache-2.0 |
 | `phf` | 0.13.1 | MIT |
 | `phf_shared` | 0.13.1 | MIT |
 | `pico-args` | 0.5.0 | MIT |
-| `pin-project` | 1.1.13 | Apache-2.0 OR MIT |
-| `pin-project-lite` | 0.2.17 | Apache-2.0 OR MIT |
+| `pin-project` | 1.2.0 | Apache-2.0 OR MIT |
+| `pin-project-lite` | 0.2.18 | Apache-2.0 OR MIT |
 | `pin-utils` | 0.1.1 | MIT OR Apache-2.0 |
 | `pin-weak` | 1.1.0 | MIT |
-| `plist` | 1.10.2 | MIT |
+| `plist` | 1.10.4 | MIT |
 | `png` | 0.18.1 | MIT OR Apache-2.0 |
 | `polycool` | 0.4.0 | MIT OR Apache-2.0 |
 | `portable-atomic` | 1.15.0 | Apache-2.0 OR MIT |
@@ -291,24 +293,24 @@ with the crates that carry it.
 | `raw-window-handle` | 0.6.2 | MIT OR Apache-2.0 OR Zlib |
 | `raw-window-metal` | 1.1.0 | MIT OR Apache-2.0 |
 | `read-fonts` | 0.41.0 | MIT OR Apache-2.0 |
-| `regex` | 1.13.1 | MIT OR Apache-2.0 |
-| `regex-automata` | 0.4.18 | MIT OR Apache-2.0 |
+| `regex` | 1.13.2 | MIT OR Apache-2.0 |
+| `regex-automata` | 0.4.19 | MIT OR Apache-2.0 |
 | `regex-lite` | 0.1.9 | MIT OR Apache-2.0 |
-| `regex-syntax` | 0.8.11 | MIT OR Apache-2.0 |
+| `regex-syntax` | 0.8.12 | MIT OR Apache-2.0 |
 | `renderdoc-sys` | 1.1.0 | MIT OR Apache-2.0 |
 | `reqwest` | 0.13.5 | MIT OR Apache-2.0 |
-| `resvg` | 0.48.1 | Apache-2.0 OR MIT |
-| `rfd` | 0.16.0 | MIT |
+| `resvg` | 0.49.0 | Apache-2.0 OR MIT |
+| `rfd` | 0.17.2 | MIT |
 | `rgb` | 0.8.53 | MIT |
 | `ring` | 0.17.14 | Apache-2.0 AND ISC |
-| `roxmltree` | 0.21.1 | MIT OR Apache-2.0 |
-| `rusqlite` | 0.41.1 | MIT |
+| `roxmltree` | 0.21.2 | MIT OR Apache-2.0 |
+| `rusqlite` | 0.43.0 | MIT |
 | `rustc-hash` | 1.1.0 | Apache-2.0/MIT |
-| `rustix` | 1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
+| `rustix` | 1.1.6 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | `rustls` | 0.23.46 | Apache-2.0 OR ISC OR MIT |
-| `rustls-pki-types` | 1.15.1 | MIT OR Apache-2.0 |
+| `rustls-pki-types` | 1.16.0 | MIT OR Apache-2.0 |
 | `rustls-platform-verifier` | 0.7.1 | MIT OR Apache-2.0 |
-| `rustls-webpki` | 0.103.16 | ISC |
+| `rustls-webpki` | 0.103.17 | ISC |
 | `same-file` | 1.0.6 | Unlicense/MIT |
 | `scoped-tls-hkt` | 0.1.5 | MIT/Apache-2.0 |
 | `scopeguard` | 1.2.0 | MIT OR Apache-2.0 |
@@ -319,21 +321,21 @@ with the crates that carry it.
 | `serde-untagged` | 0.1.9 | MIT OR Apache-2.0 |
 | `serde_core` | 1.0.229 | MIT OR Apache-2.0 |
 | `serde_json` | 1.0.154 | MIT OR Apache-2.0 |
-| `serde_spanned` | 1.1.2 | MIT OR Apache-2.0 |
-| `serde_with` | 3.24.0 | MIT OR Apache-2.0 |
+| `serde_spanned` | 1.1.3 | MIT OR Apache-2.0 |
+| `serde_with` | 3.25.0 | MIT OR Apache-2.0 |
 | `serialize-to-javascript` | 0.1.2 | MIT OR Apache-2.0 |
 | `shared_child` | 1.1.2 | MIT |
 | `simd-adler32` | 0.3.10 | MIT |
 | `simdutf8` | 0.1.5 | MIT OR Apache-2.0 |
 | `simplecss` | 0.2.2 | Apache-2.0 OR MIT |
 | `siphasher` | 1.0.4 | MIT OR Apache-2.0 |
-| `skia-bindings` | 0.153.3 | MIT |
-| `skia-safe` | 0.153.3 | MIT |
+| `skia-bindings` | 0.157.0 | MIT |
+| `skia-safe` | 0.157.0 | MIT |
 | `skrifa` | 0.44.0 | MIT OR Apache-2.0 |
 | `slab` | 0.4.12 | MIT |
-| `slint` | 1.18.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
+| `slint` | 1.19.1 | GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0 |
 | `slotmap` | 1.1.1 | Zlib |
-| `smallvec` | 1.16.3 | MIT OR Apache-2.0 |
+| `smallvec` | 1.16.6 | MIT OR Apache-2.0 |
 | `smol_str` | 0.2.2 | MIT OR Apache-2.0 |
 | `socket2` | 0.6.5 | MIT OR Apache-2.0 |
 | `softbuffer` | 0.4.8 | MIT OR Apache-2.0 |
@@ -343,7 +345,7 @@ with the crates that carry it.
 | `strict-num` | 0.1.1 | MIT |
 | `strum` | 0.28.0 | MIT |
 | `subtle` | 2.6.1 | BSD-3-Clause |
-| `svgtypes` | 0.16.1 | Apache-2.0 OR MIT |
+| `svgtypes` | 0.16.2 | Apache-2.0 OR MIT |
 | `symphonia` | 0.6.1 | MPL-2.0 |
 | `symphonia-bundle-flac` | 0.6.1 | MPL-2.0 |
 | `symphonia-bundle-mp3` | 0.6.1 | MPL-2.0 |
@@ -360,20 +362,20 @@ with the crates that carry it.
 | `sys-locale` | 0.3.2 | MIT OR Apache-2.0 |
 | `system-configuration` | 0.7.0 | MIT OR Apache-2.0 |
 | `system-configuration-sys` | 0.6.0 | MIT OR Apache-2.0 |
-| `taffy` | 0.10.1 | MIT |
-| `tao` | 0.37.1 | Apache-2.0 |
+| `taffy` | 0.15.1 | MIT |
+| `tao` | 0.37.3 | Apache-2.0 |
 | `tar` | 0.4.46 | MIT OR Apache-2.0 |
-| `tauri` | 2.12.5 | Apache-2.0 OR MIT |
-| `tauri-plugin-dialog` | 2.8.3 | Apache-2.0 OR MIT |
+| `tauri` | 2.12.7 | Apache-2.0 OR MIT |
+| `tauri-plugin-dialog` | 2.8.4 | Apache-2.0 OR MIT |
 | `tauri-plugin-fs` | 2.7.1 | Apache-2.0 OR MIT |
 | `tauri-plugin-global-shortcut` | 2.4.1 | Apache-2.0 OR MIT |
-| `tauri-plugin-opener` | 2.7.2 | Apache-2.0 OR MIT |
-| `tauri-plugin-shell` | 2.5.0 | Apache-2.0 OR MIT |
-| `tauri-plugin-single-instance` | 2.5.4 | Apache-2.0 OR MIT |
-| `tauri-plugin-updater` | 2.14.0 | Apache-2.0 OR MIT |
-| `tauri-runtime` | 2.12.2 | Apache-2.0 OR MIT |
-| `tauri-runtime-wry` | 2.12.3 | Apache-2.0 OR MIT |
-| `tauri-utils` | 2.10.2 | Apache-2.0 OR MIT |
+| `tauri-plugin-opener` | 2.7.3 | Apache-2.0 OR MIT |
+| `tauri-plugin-shell` | 2.6.0 | Apache-2.0 OR MIT |
+| `tauri-plugin-single-instance` | 2.5.5 | Apache-2.0 OR MIT |
+| `tauri-plugin-updater` | 2.14.1 | Apache-2.0 OR MIT |
+| `tauri-runtime` | 2.12.4 | Apache-2.0 OR MIT |
+| `tauri-runtime-wry` | 2.12.5 | Apache-2.0 OR MIT |
+| `tauri-utils` | 2.10.4 | Apache-2.0 OR MIT |
 | `tempfile` | 3.27.0 | MIT OR Apache-2.0 |
 | `thiserror` | 2.0.21 | MIT OR Apache-2.0 |
 | `tiff` | 0.11.3 | MIT |
@@ -381,15 +383,15 @@ with the crates that carry it.
 | `time-core` | 0.1.9 | MIT OR Apache-2.0 |
 | `tiny-skia` | 0.12.0 | BSD-3-Clause |
 | `tiny-skia-path` | 0.12.0 | BSD-3-Clause |
-| `tinystr` | 0.8.4 | Unicode-3.0 |
+| `tinystr` | 0.8.5 | Unicode-3.0 |
 | `tinyvec` | 1.13.3 | Zlib OR Apache-2.0 OR MIT |
 | `tokio` | 1.54.1 | MIT |
 | `tokio-rustls` | 0.26.6 | MIT OR Apache-2.0 |
 | `tokio-util` | 0.7.20 | MIT |
-| `toml` | 1.1.8+spec-1.1.0 | MIT OR Apache-2.0 |
-| `toml_datetime` | 1.1.2+spec-1.1.0 | MIT OR Apache-2.0 |
-| `toml_parser` | 1.1.5+spec-1.1.0 | MIT OR Apache-2.0 |
-| `toml_writer` | 1.1.3+spec-1.1.0 | MIT OR Apache-2.0 |
+| `toml` | 1.2.3+spec-1.1.0 | MIT OR Apache-2.0 |
+| `toml_datetime` | 1.1.3+spec-1.1.0 | MIT OR Apache-2.0 |
+| `toml_parser` | 1.1.7+spec-1.1.0 | MIT OR Apache-2.0 |
+| `toml_writer` | 1.2.0+spec-1.1.0 | MIT OR Apache-2.0 |
 | `tower` | 0.5.3 | MIT |
 | `tower-http` | 0.6.11 | MIT |
 | `tower-layer` | 0.3.3 | MIT |
@@ -404,31 +406,32 @@ with the crates that carry it.
 | `unicode-ident` | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 |
 | `unicode-linebreak` | 0.1.5 | Apache-2.0 |
 | `unicode-normalization` | 0.1.26 | (MIT OR Apache-2.0) AND Unicode-3.0 |
-| `unicode-script` | 0.5.8 | MIT OR Apache-2.0 |
+| `unicode-script` | 0.5.9 | MIT OR Apache-2.0 |
 | `unicode-segmentation` | 1.13.3 | MIT OR Apache-2.0 |
 | `unicode-vo` | 0.1.0 | MIT/Apache-2.0 |
-| `unicode-width` | 0.2.2 | MIT OR Apache-2.0 |
+| `unicode-width` | 0.2.3 | MIT OR Apache-2.0 |
 | `untrusted` | 0.9.0 | ISC |
-| `url` | 2.5.8 | MIT OR Apache-2.0 |
+| `url` | 2.5.9 | MIT OR Apache-2.0 |
 | `urlpattern` | 0.6.0 | MIT |
-| `usvg` | 0.48.1 | Apache-2.0 OR MIT |
-| `utf8_iter` | 1.0.4 | Apache-2.0 OR MIT |
-| `uuid` | 1.28.0 | Apache-2.0 OR MIT |
-| `vtable` | 0.5.0 | MIT OR Apache-2.0 |
-| `walkdir` | 2.5.0 | Unlicense/MIT |
+| `usvg` | 0.49.0 | Apache-2.0 OR MIT |
+| `utf8_iter` | 1.1.0 | Apache-2.0 OR MIT |
+| `utf_types` | 1.0.0 | Apache-2.0 OR MIT |
+| `uuid` | 1.29.3 | Apache-2.0 OR MIT |
+| `vtable` | 0.5.1 | MIT OR Apache-2.0 |
+| `walkdir` | 2.5.1 | Unlicense/MIT |
 | `want` | 0.3.2 | MIT |
 | `web-time` | 1.1.0 | MIT OR Apache-2.0 |
-| `webbrowser` | 1.2.4 | MIT OR Apache-2.0 |
+| `webbrowser` | 1.2.7 | MIT OR Apache-2.0 |
 | `webview2-com` | 0.39.1 | MIT |
 | `webview2-com-sys` | 0.39.1 | MIT |
 | `weezl` | 0.1.12 | MIT OR Apache-2.0 |
-| `wgpu` | 30.0.1 | MIT OR Apache-2.0 |
-| `wgpu-core` | 30.0.1 | MIT OR Apache-2.0 |
-| `wgpu-core-deps-apple` | 30.0.1 | MIT OR Apache-2.0 |
-| `wgpu-core-deps-windows-linux-android` | 30.0.1 | MIT OR Apache-2.0 |
-| `wgpu-hal` | 30.0.1 | MIT OR Apache-2.0 |
-| `wgpu-naga-bridge` | 30.0.1 | MIT OR Apache-2.0 |
-| `wgpu-types` | 30.0.1 | MIT OR Apache-2.0 |
+| `wgpu` | 30.0.2 | MIT OR Apache-2.0 |
+| `wgpu-core` | 30.0.2 | MIT OR Apache-2.0 |
+| `wgpu-core-deps-apple` | 30.0.2 | MIT OR Apache-2.0 |
+| `wgpu-core-deps-windows-linux-android` | 30.0.2 | MIT OR Apache-2.0 |
+| `wgpu-hal` | 30.0.2 | MIT OR Apache-2.0 |
+| `wgpu-naga-bridge` | 30.0.2 | MIT OR Apache-2.0 |
+| `wgpu-types` | 30.0.2 | MIT OR Apache-2.0 |
 | `winapi-util` | 0.1.11 | Unlicense OR MIT |
 | `window-vibrancy` | 0.8.1 | Apache-2.0 OR MIT |
 | `windows` | 0.62.2 | MIT OR Apache-2.0 |
@@ -440,44 +443,38 @@ with the crates that carry it.
 | `windows-registry` | 0.6.1 | MIT OR Apache-2.0 |
 | `windows-result` | 0.4.1 | MIT OR Apache-2.0 |
 | `windows-strings` | 0.5.1 | MIT OR Apache-2.0 |
-| `windows-sys` | 0.45.0 | MIT OR Apache-2.0 |
-| `windows-sys` | 0.48.0 | MIT OR Apache-2.0 |
 | `windows-sys` | 0.52.0 | MIT OR Apache-2.0 |
 | `windows-sys` | 0.59.0 | MIT OR Apache-2.0 |
 | `windows-sys` | 0.60.2 | MIT OR Apache-2.0 |
 | `windows-sys` | 0.61.2 | MIT OR Apache-2.0 |
-| `windows-targets` | 0.42.2 | MIT OR Apache-2.0 |
-| `windows-targets` | 0.48.5 | MIT OR Apache-2.0 |
 | `windows-targets` | 0.52.6 | MIT OR Apache-2.0 |
 | `windows-targets` | 0.53.5 | MIT OR Apache-2.0 |
 | `windows-threading` | 0.2.1 | MIT OR Apache-2.0 |
 | `windows-version` | 0.1.7 | MIT OR Apache-2.0 |
-| `windows_x86_64_msvc` | 0.42.2 | MIT OR Apache-2.0 |
-| `windows_x86_64_msvc` | 0.48.5 | MIT OR Apache-2.0 |
 | `windows_x86_64_msvc` | 0.52.6 | MIT OR Apache-2.0 |
 | `windows_x86_64_msvc` | 0.53.1 | MIT OR Apache-2.0 |
 | `winit` | 0.30.13 | Apache-2.0 |
-| `winnow` | 1.0.4 | MIT |
+| `winnow` | 1.0.5 | MIT |
 | `winreg` | 0.56.0 | MIT |
 | `write-fonts` | 0.50.0 | MIT OR Apache-2.0 |
 | `writeable` | 0.6.4 | Unicode-3.0 |
-| `wry` | 0.57.0 | Apache-2.0 OR MIT |
-| `xattr` | 1.6.1 | MIT OR Apache-2.0 |
+| `wry` | 0.57.4 | Apache-2.0 OR MIT |
+| `xattr` | 1.7.0 | MIT OR Apache-2.0 |
 | `xmlwriter` | 0.1.0 | MIT |
-| `xxhash-rust` | 0.8.19 | BSL-1.0 |
-| `yoke` | 0.8.3 | Unicode-3.0 |
-| `zerocopy` | 0.8.63 | BSD-2-Clause OR Apache-2.0 OR MIT |
+| `xxhash-rust` | 0.8.21 | BSL-1.0 |
+| `yoke` | 0.8.4 | Unicode-3.0 |
+| `zerocopy` | 0.8.66 | BSD-2-Clause OR Apache-2.0 OR MIT |
 | `zerofrom` | 0.1.8 | Unicode-3.0 |
-| `zeroize` | 1.9.1 | Apache-2.0 OR MIT |
+| `zeroize` | 1.9.2 | Apache-2.0 OR MIT |
 | `zerotrie` | 0.2.5 | Unicode-3.0 |
-| `zerovec` | 0.11.8 | Unicode-3.0 |
+| `zerovec` | 0.11.9 | Unicode-3.0 |
 | `zmij` | 1.0.23 | MIT |
 | `zune-core` | 0.5.3 | MIT OR Apache-2.0 OR Zlib |
 | `zune-jpeg` | 0.5.15 | MIT OR Apache-2.0 OR Zlib |
 
 ## The notices themselves
 
-### `@tauri-apps/api` 2.12.4 — Apache-2.0 OR MIT
+### `@tauri-apps/api` 2.12.5 — Apache-2.0 OR MIT
 
 ```text
 LICENSE-APACHE-2.0
@@ -684,7 +681,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### `@tauri-apps/plugin-dialog` 2.8.3 — MIT OR Apache-2.0
+### `@tauri-apps/plugin-dialog` 2.8.4 — MIT OR Apache-2.0
 
 ```text
 MIT License
@@ -710,7 +707,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### `@tauri-apps/plugin-opener` 2.7.2 — MIT OR Apache-2.0
+### `@tauri-apps/plugin-opener` 2.7.3 — MIT OR Apache-2.0
 
 ```text
 MIT License
@@ -736,7 +733,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### `argparse` 3.0.3 — PSF-2.0
+### `argparse` 3.0.4 — PSF-2.0
 
 ```text
 LICENSE

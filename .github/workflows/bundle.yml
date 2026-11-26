@@ -6,6 +6,7 @@ on:
     paths:
       - "app/src-tauri/installer.nsi"
       - "app/src-tauri/tauri.conf.json"
+      - "app/src-tauri/tauri.windows.conf.json"
       - "app/src-tauri/Cargo.toml"
       - "app/src-tauri/build.rs"
       - "app/package.json"
@@ -49,7 +50,7 @@ jobs:
             echo "packaging=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          watched='^(app/src-tauri/(installer\.nsi|tauri\.conf\.json|Cargo\.toml|build\.rs)'
+          watched='^(app/src-tauri/(installer\.nsi|tauri(\.windows)?\.conf\.json|Cargo\.toml|build\.rs)'
           watched+='|app/package\.json|scripts/sidecar\.py|Cargo\.toml$'
           watched+='|\.github/actions/sidecar/action\.yml$'
           watched+='|\.github/workflows/(bundle|release)\.yml$)'
@@ -122,6 +123,15 @@ jobs:
           }
           want 'oname=cp-panel.exe' \
             "lay down the panel; the sidecar was not bundled"
+          runtime=$(cd app/src-tauri/binaries && ls *.dll 2>/dev/null) || true
+          if [ -z "$runtime" ]; then
+            echo "::error::the sidecar laid no Visual C++ runtime beside the panel, and the panel does not start without it"
+            status=1
+          fi
+          for one in $runtime; do
+            want "oname=$one" "lay $one beside the panel, which does not start without it"
+            want "Delete \"\$INSTDIR\\$one\"" "take $one away on uninstall"
+          done
           want 'StrCpy $INSTDIR "$LOCALAPPDATA\Programs' \
             "keep the binaries out of the data folder"
           want '!define MAINBINARYNAME "cp-gui"' \

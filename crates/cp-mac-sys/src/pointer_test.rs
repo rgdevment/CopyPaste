@@ -33,3 +33,9 @@ fn off_the_main_thread_there_is_no_spot() {
         assert_eq!(spot(), None);
     }
 }
+
+#[test]
+fn the_double_click_interval_is_a_positive_finite_time() {
+    let seconds = double_click_interval();
+    assert!(seconds.is_finite() && seconds > 0.0, "{seconds}");
+}
