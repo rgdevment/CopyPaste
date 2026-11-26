@@ -56,7 +56,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNCRjc2NTAyRDdEQ0JCRUYKUldUdnU5elhBbVgzTzI0MnhTV3k5RTA4aVdFb2oxUUtGaW5FY0pjUkJ2bkorZllNL0FpeW94b1IK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZFNEM1QkJBNTMyRjZGMkYKUldRdmJ5OVR1bHRNL2xrTjRnRXYzdzFiTmRvWDZYS2JHSVR5dTdNd0NRcVFnOVFmM1FKbzJpU1AK",
       "endpoints": [
         "https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/latest.json"
       ],

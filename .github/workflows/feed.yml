@@ -32,9 +32,7 @@ jobs:
             sleep $((attempt * 5))
           done
           command -v minisign
-          feed="https://raw.githubusercontent.com/${{ github.repository }}/manifest"
-
-          jq -r '.plugins.updater.pubkey' app/src-tauri/tauri.conf.json | base64 -d > feed.pub
+          feed="https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest"
 
           newest=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft \
             -q '.[] | select(.isPrerelease == false and .isDraft == false) | .tagName' \
@@ -109,10 +107,15 @@ jobs:
                 echo "::error::the installer for $os in $what does not answer: $url"
                 return 1
               fi
-              if ! minisign -Vm one.bin -p feed.pub -x one.sig >/dev/null; then
-                echo "::error::the installer for $os in $what does not verify against the key \
-                      every installed copy carries. It answers, and it cannot be installed: $url"
+              local key
+              if ! key=$(bash scripts/verify_update.sh one.bin one.sig .github/updater-retired.pub); then
+                echo "::error::the installer for $os in $what verifies against no updater key an \
+                      installed copy carries. It answers, and it cannot be installed: $url"
                 return 1
+              fi
+              if [ "$key" = "retired" ]; then
+                echo "::warning::the installer for $os in $what answers only to the key in \
+                      .github/updater-retired.pub, which copies built from this tree do not carry"
               fi
               local bound=0
               bash scripts/signed_for.sh one.sig "$expected" || bound=$?
@@ -124,7 +127,7 @@ jobs:
                          than the «${expected}» it is offered as: $url"
                    return 1 ;;
               esac
-              echo "  $os verifies"
+              echo "  $os verifies against the $key key"
             done
           }
 
@@ -167,11 +170,10 @@ jobs:
 
       - name: The 2.x is still being told
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WANTED: ${{ vars.BRIDGE_MANIFEST }}
         run: |
           set -euo pipefail
-          base="https://github.com/${{ github.repository }}/releases/latest/download"
+          base="https://github.com/rgdevment/CopyPaste/releases/latest/download"
           grab() {
             curl -sSL --retry 5 --retry-all-errors --retry-delay 3 \
               -H "Cache-Control: no-cache" -o "$2" -w '%{http_code}' "$base/$1" || echo 000
@@ -208,24 +210,14 @@ jobs:
           if [ "$(jq -r .severity bridge.json)" = "critical" ] \
              || [ "$(jq -r '.blockedVersions | length' bridge.json)" != "0" ]; then
             echo "::error::the manifest being served would put a 2.x behind its blocked-version \
-                  screen, over a history only that person has. It verifies, so it was signed with \
-                  the release key: somebody did that by hand, because the pipeline refuses both."
+                  screen, over a history only that person has, and it is not the pair in \
+                  .github/bridge."
             exit 1
           fi
 
           said=$(jq -r '.latest // ""' bridge.json)
-          published=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft \
-            -q '.[] | select(.isPrerelease == false and .isDraft == false) | .tagName')
-          newest=$(printf '%s\n' "$published" | sed 's/^v//' \
-            | grep -E '^([3-9]|[1-9][0-9]+)\.' | sort -V | tail -1 || true)
-          if [ -z "$newest" ]; then
-            echo "the 2.x is being told «${said}», and no stable 3.x is out for it to be told about"
-            exit 0
-          fi
-          if [ "$said" != "$newest" ]; then
-            echo "::error::the 2.x is being told «${said}» and the highest stable release is \
-                  «${newest}». Either the bridge was left off the release that went out, or it \
-                  carries a version nobody is publishing."
+          if ! printf '%s' "$said" | grep -qE '^([3-9]|[1-9][0-9]+)\.[0-9]+\.[0-9]+$'; then
+            echo "::error::the 2.x is being told «${said}», which is not a 3.x"
             exit 1
           fi
-          echo "the 2.x is being told $said, which is the release that is out"
+          echo "the 2.x is being told $said, a 3.x"

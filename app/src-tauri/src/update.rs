@@ -5,7 +5,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const APART: u64 = 24 * 60 * 60;
 
 const FROM: [&str; 2] = ["github.com", "objects.githubusercontent.com"];
-const RELEASES: &str = "/rgdevment/CopyPaste/releases/download/";
+const RELEASES: [&str; 2] = [
+    "/rgdevment/CopyPaste/releases/download/",
+    "/rgdevment/CoPanda/releases/download/",
+];
+const SPARE: &str = include_str!("../updater-spare.pub").trim_ascii();
 const ROOM: usize = 64 * 1024;
 const DOWNLOAD: std::time::Duration = std::time::Duration::from_secs(600);
 
@@ -76,7 +80,9 @@ pub const fn self_installs(route: Route) -> bool {
 
 pub fn ours(url: &str) -> bool {
     url.parse::<tauri::Url>().is_ok_and(|at| {
-        at.scheme() == "https" && at.host_str() == Some(FROM[0]) && at.path().starts_with(RELEASES)
+        at.scheme() == "https"
+            && at.host_str() == Some(FROM[0])
+            && RELEASES.iter().any(|one| at.path().starts_with(one))
     }) || url
         .parse::<tauri::Url>()
         .is_ok_and(|at| at.scheme() == "https" && at.host_str() == Some(FROM[1]))
@@ -166,11 +172,15 @@ async fn looked(
     feeds: Vec<tauri::Url>,
     asked: String,
     target: Option<&'static str>,
+    key: Option<&'static str>,
 ) -> Result<Option<tauri_plugin_updater::Update>, tauri_plugin_updater::Error> {
     use tauri_plugin_updater::UpdaterExt;
     let mut builder = app.updater_builder();
     if let Some(target) = target {
         builder = builder.target(target);
+    }
+    if let Some(key) = key {
+        builder = builder.pubkey(key);
     }
     builder
         .endpoints(feeds)?
@@ -179,6 +189,71 @@ async fn looked(
         .build()?
         .check()
         .await
+}
+
+async fn checked(
+    app: &tauri::AppHandle,
+    feeds: &[tauri::Url],
+    want: &str,
+    native: Option<&'static str>,
+    key: Option<&'static str>,
+) -> Result<Option<tauri_plugin_updater::Update>, tauri_plugin_updater::Error> {
+    match looked(app, feeds.to_vec(), want.to_owned(), native, key).await {
+        Err(tauri_plugin_updater::Error::TargetNotFound(_)) if native.is_some() => {
+            looked(app, feeds.to_vec(), want.to_owned(), None, key).await
+        }
+        other => other,
+    }
+}
+
+fn failed(want: &str, why: &dyn std::fmt::Display) -> String {
+    crate::note::note(&format!("the update to {want} did not go through: {why}"));
+    FAILED.to_owned()
+}
+
+pub const fn worth_the_spare(why: &tauri_plugin_updater::Error) -> bool {
+    matches!(why, tauri_plugin_updater::Error::Minisign(_))
+}
+
+fn trusted(
+    mut update: tauri_plugin_updater::Update,
+    want: &str,
+) -> Result<tauri_plugin_updater::Update, String> {
+    if !ours(update.download_url.as_str()) {
+        crate::note::note(&format!("the feed sends {want} to {}", update.download_url));
+        return Err(FOREIGN.to_owned());
+    }
+    update.timeout = Some(DOWNLOAD);
+    Ok(update)
+}
+
+async fn downloaded(
+    app: &tauri::AppHandle,
+    update: tauri_plugin_updater::Update,
+    feeds: &[tauri::Url],
+    want: &str,
+    native: Option<&'static str>,
+) -> Result<(tauri_plugin_updater::Update, Vec<u8>), String> {
+    let update = trusted(update, want)?;
+    match update.download(|_, _| {}, || {}).await {
+        Ok(bytes) => Ok((update, bytes)),
+        Err(why) if worth_the_spare(&why) => {
+            crate::note::note(&format!(
+                "{want} does not verify against the primary updater key, so the spare is tried: {why}"
+            ));
+            let spare = checked(app, feeds, want, native, Some(SPARE))
+                .await
+                .map_err(|why| failed(want, &why))?
+                .ok_or_else(|| failed(want, &"the feed stopped offering it"))?;
+            let spare = trusted(spare, want)?;
+            let bytes = spare
+                .download(|_, _| {}, || {})
+                .await
+                .map_err(|why| failed(want, &why))?;
+            Ok((spare, bytes))
+        }
+        Err(why) => Err(failed(want, &why)),
+    }
 }
 
 pub fn target_for(arch: &str, translated: bool) -> Option<&'static str> {
@@ -375,25 +450,16 @@ pub async fn update_install(
         return Err(NOTHING.to_owned());
     }
 
-    let asked = want.clone();
     let feeds = feeds_for(&want)
         .into_iter()
         .map(|one| one.parse::<tauri::Url>().map_err(|why| why.to_string()))
         .collect::<Result<Vec<_>, _>>()?;
-    let failed = |why: &dyn std::fmt::Display| {
-        crate::note::note(&format!("the update to {want} did not go through: {why}"));
-        FAILED.to_owned()
-    };
     let native = target_for(std::env::consts::ARCH, translated());
-    let update = match looked(&app, feeds.clone(), asked.clone(), native).await {
-        Err(tauri_plugin_updater::Error::TargetNotFound(_)) if native.is_some() => {
-            looked(&app, feeds, asked, None).await
-        }
-        other => other,
-    }
-    .map_err(|why| failed(&why))?;
+    let update = checked(&app, &feeds, &want, native, None)
+        .await
+        .map_err(|why| failed(&want, &why))?;
 
-    let Some(mut update) = update else {
+    let Some(update) = update else {
         let still = fetched()
             .await
             .ok()
@@ -404,16 +470,7 @@ pub async fn update_install(
         forget();
         return Err(GONE.to_owned());
     };
-    if !ours(update.download_url.as_str()) {
-        crate::note::note(&format!("the feed sends {want} to {}", update.download_url));
-        return Err(FOREIGN.to_owned());
-    }
-    update.timeout = Some(DOWNLOAD);
-
-    let bytes = update
-        .download(|_, _| {}, || {})
-        .await
-        .map_err(|why| failed(&why))?;
+    let (update, bytes) = downloaded(&app, update, &feeds, &want, native).await?;
 
     let waiting = app.clone();
     let _ = tauri::async_runtime::spawn_blocking(move || crate::panel::quit(&waiting)).await;
@@ -421,7 +478,7 @@ pub async fn update_install(
         if let Err(back) = crate::panel::relight(&app) {
             crate::note::note(&format!("the panel did not come back: {back}"));
         }
-        return Err(failed(&why));
+        return Err(failed(&want, &why));
     }
 
     forget();

@@ -55,7 +55,9 @@ pub fn decide(
         fresh_news = told
             .iter()
             .filter_map(|said| semver::Version::parse(said).ok().map(|one| (one, said)))
-            .filter(|(one, _)| is_minor_of(one, &now))
+            .filter(|(one, _)| earlier_in_its_line(one, &now))
+            .max_by(|a, b| a.0.cmp(&b.0))
+            .into_iter()
             .collect();
     }
     fresh_news.sort_by(|a, b| b.0.cmp(&a.0));
@@ -71,10 +73,13 @@ pub fn decide(
     }
 }
 
-fn is_minor_of(one: &semver::Version, patch: &semver::Version) -> bool {
+fn earlier_in_its_line(one: &semver::Version, patch: &semver::Version) -> bool {
     patch.patch > 0
         && patch.pre.is_empty()
-        && *one == semver::Version::new(patch.major, patch.minor, 0)
+        && one.pre.is_empty()
+        && one.major == patch.major
+        && one.minor == patch.minor
+        && one < patch
 }
 
 pub fn behind(welcomed: Option<&str>, running: &str) -> bool {

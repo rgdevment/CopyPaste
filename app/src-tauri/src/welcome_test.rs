@@ -69,6 +69,34 @@ fn the_next_patch_without_its_own_entry_tells_its_minor_again() {
 }
 
 #[test]
+fn a_patch_tells_again_the_newest_entry_of_its_line_when_the_minor_has_none() {
+    assert_eq!(
+        decide(
+            false,
+            false,
+            Some("3.5.1"),
+            "3.5.2",
+            &said(&["3.4.0", "3.5.1"])
+        ),
+        Greeting::News {
+            versions: said(&["3.5.1"])
+        }
+    );
+    assert_eq!(
+        decide(
+            false,
+            false,
+            Some("3.5.3"),
+            "3.5.4",
+            &said(&["3.5.1", "3.5.3", "3.6.0"])
+        ),
+        Greeting::News {
+            versions: said(&["3.5.3"])
+        }
+    );
+}
+
+#[test]
 fn a_patch_with_its_own_entry_does_not_repeat_its_minor() {
     let all = said(&["3.1.0", "3.1.2"]);
     assert_eq!(

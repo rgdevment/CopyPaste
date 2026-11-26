@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "latest": "0.0.0",
+  "latest": "3.4.0",
   "minimumSupported": "2.0.0",
   "blockedVersions": [],
   "severity": "major",
@@ -12,7 +12,7 @@
       "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
     },
     "msstore": {
-      "url": "ms-windows-store://pdp/?productid=PLACEHOLDER"
+      "url": "ms-windows-store://pdp/?productid=9NBJRZF3K856"
     },
     "homebrew": {
       "command": "brew upgrade --cask copypaste"
@@ -21,11 +21,11 @@
   "releaseNotes": {
     "en": {
       "summary": "CopyPaste 3.0 is a new application. It finds the history of your 2.x and offers to bring it over; nothing moves until you ask for it.",
-      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
+      "url": "https://github.com/rgdevment/CopyPaste/releases/tag/v3.4.0"
     },
     "es": {
       "summary": "CopyPaste 3.0 es una aplicación nueva. Encuentra el historial de tu 2.x y ofrece traerlo; nada se mueve hasta que tú lo pidas.",
-      "url": "https://github.com/rgdevment/CopyPaste/releases/latest"
+      "url": "https://github.com/rgdevment/CopyPaste/releases/tag/v3.4.0"
     }
   }
 }
