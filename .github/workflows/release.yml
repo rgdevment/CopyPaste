@@ -123,61 +123,10 @@ jobs:
       version: ${{ steps.resolve.outputs.version }}
       prerelease: ${{ steps.resolve.outputs.prerelease }}
       macos: ${{ steps.resolve.outputs.macos }}
-    env:
-      HAS_P12: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
-      HAS_P12_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD != '' }}
-      HAS_APPLE_ID: ${{ secrets.APPLE_ID != '' }}
-      HAS_APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD != '' }}
-      HAS_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID != '' }}
-      HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
-      HAS_UPDATER_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD != '' }}
-      HAS_PFX: ${{ secrets.PFX_BASE64 != '' }}
-      HAS_PFX_PASSWORD: ${{ secrets.PFX_PASSWORD != '' }}
-      HAS_BRIDGE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY != '' }}
-      WANTS_BRIDGE: ${{ vars.BRIDGE_MANIFEST == 'true' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-
-      - name: Signing secrets come in pairs
-        run: |
-          fail() { echo "::error::$1"; exit 1; }
-
-          if [ "$HAS_PFX" = "true" ] && [ "$HAS_PFX_PASSWORD" != "true" ]; then
-            fail "PFX_BASE64 is set but PFX_PASSWORD is empty"
-          fi
-          if [ "$HAS_P12" = "true" ] && [ "$HAS_P12_PASSWORD" != "true" ]; then
-            fail "MACOS_CERTIFICATE_P12 is set but MACOS_CERTIFICATE_PASSWORD is empty"
-          fi
-          if [ "$HAS_APPLE_ID" = "true" ] &&
-            { [ "$HAS_APPLE_APP_PASSWORD" != "true" ] || [ "$HAS_APPLE_TEAM_ID" != "true" ]; }; then
-            fail "APPLE_ID is set but APPLE_APP_PASSWORD or APPLE_TEAM_ID is empty"
-          fi
-          if [ "$HAS_UPDATER_KEY" = "true" ] && [ "$HAS_UPDATER_PASSWORD" != "true" ]; then
-            echo "::notice::the updater key carries no password; that is fine if it was made without one"
-          fi
-
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            missing=""
-            want() { [ "$2" = "true" ] || missing="$missing $1"; }
-            want TAURI_SIGNING_PRIVATE_KEY "$HAS_UPDATER_KEY"
-            want PFX_BASE64 "$HAS_PFX"
-            want PFX_PASSWORD "$HAS_PFX_PASSWORD"
-            if [ "$BUILD_MACOS" = "true" ]; then
-              want MACOS_CERTIFICATE_P12 "$HAS_P12"
-              want MACOS_CERTIFICATE_PASSWORD "$HAS_P12_PASSWORD"
-              want APPLE_ID "$HAS_APPLE_ID"
-              want APPLE_APP_PASSWORD "$HAS_APPLE_APP_PASSWORD"
-              want APPLE_TEAM_ID "$HAS_APPLE_TEAM_ID"
-            fi
-            if [ "$WANTS_BRIDGE" = "true" ]; then
-              want RELEASE_PRIVATE_KEY "$HAS_BRIDGE_KEY"
-            fi
-            [ -z "$missing" ] || fail "this tag would be released without:$missing"
-          fi
-
-          echo "signing secrets are coherent"
 
       - id: resolve
         env:
@@ -223,12 +172,30 @@ jobs:
     needs: [version, tested]
     runs-on: windows-latest
     timeout-minutes: 60
+    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'signing' || '' }}
     outputs:
       stage: ${{ steps.stage.outputs.sha }}
     env:
       TARGET: x86_64-pc-windows-msvc
       HAS_PFX: ${{ secrets.PFX_BASE64 != '' }}
     steps:
+      - name: The signing secrets are here, and in pairs
+        shell: bash
+        env:
+          HAS_PFX_PASSWORD: ${{ secrets.PFX_PASSWORD != '' }}
+        run: |
+          if [ "$HAS_PFX" = "true" ] && [ "$HAS_PFX_PASSWORD" != "true" ]; then
+            echo "::error::PFX_BASE64 is set but PFX_PASSWORD is empty"
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" == refs/tags/v* ]] \
+             && { [ "$HAS_PFX" != "true" ] || [ "$HAS_PFX_PASSWORD" != "true" ]; }; then
+            echo "::error::this tag would ship an unsigned Windows build: the signing environment \
+          holds no PFX_BASE64 and PFX_PASSWORD"
+            exit 1
+          fi
+          echo "the Windows signing secrets are coherent"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
@@ -474,12 +441,40 @@ jobs:
             arch: aarch64
           - target: x86_64-apple-darwin
             arch: x86_64
+    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'signing' || '' }}
     env:
       TARGET: ${{ matrix.target }}
       ARCH: ${{ matrix.arch }}
       HAS_P12: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
       HAS_APPLE_ID: ${{ secrets.APPLE_ID != '' }}
     steps:
+      - name: The signing secrets are here, and in pairs
+        env:
+          HAS_P12_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD != '' }}
+          HAS_APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD != '' }}
+          HAS_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID != '' }}
+        run: |
+          fail() { echo "::error::$1"; exit 1; }
+          if [ "$HAS_P12" = "true" ] && [ "$HAS_P12_PASSWORD" != "true" ]; then
+            fail "MACOS_CERTIFICATE_P12 is set but MACOS_CERTIFICATE_PASSWORD is empty"
+          fi
+          if [ "$HAS_APPLE_ID" = "true" ] &&
+            { [ "$HAS_APPLE_APP_PASSWORD" != "true" ] || [ "$HAS_APPLE_TEAM_ID" != "true" ]; }; then
+            fail "APPLE_ID is set but APPLE_APP_PASSWORD or APPLE_TEAM_ID is empty"
+          fi
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            missing=""
+            want() { [ "$2" = "true" ] || missing="$missing $1"; }
+            want MACOS_CERTIFICATE_P12 "$HAS_P12"
+            want MACOS_CERTIFICATE_PASSWORD "$HAS_P12_PASSWORD"
+            want APPLE_ID "$HAS_APPLE_ID"
+            want APPLE_APP_PASSWORD "$HAS_APPLE_APP_PASSWORD"
+            want APPLE_TEAM_ID "$HAS_APPLE_TEAM_ID"
+            [ -z "$missing" ] || fail "this tag would ship a macOS build the signing environment \
+          cannot sign and notarise, without:$missing"
+          fi
+          echo "the macOS signing secrets are coherent"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
@@ -807,9 +802,25 @@ jobs:
       && (needs.bundle-macos.result == 'success' || needs.bundle-macos.result == 'skipped')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    environment: updater
     permissions:
       contents: read
     steps:
+      - name: The updater key is here
+        env:
+          HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+          HAS_UPDATER_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD != '' }}
+        run: |
+          if [ "$HAS_UPDATER_KEY" != "true" ]; then
+            echo "::error::the updater environment holds no TAURI_SIGNING_PRIVATE_KEY, so nothing \
+          could be signed for the updater. Nothing was published."
+            exit 1
+          fi
+          if [ "$HAS_UPDATER_PASSWORD" != "true" ]; then
+            echo "::notice::the updater key carries no password; that is fine if it was made without one"
+          fi
+          echo "the updater key is here"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
@@ -856,10 +867,6 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
-            echo "::error::TAURI_SIGNING_PRIVATE_KEY is empty, so nothing could be signed for the updater"
-            exit 1
-          fi
           v="${{ needs.version.outputs.version }}"
           ships="dist/copanda-installer-$v-windows-x86_64.exe"
           if [ "${{ needs.version.outputs.macos }}" = "true" ]; then
@@ -953,7 +960,7 @@ jobs:
           done
           exit $status
 
-      - name: The signature answers to the key this build ships
+      - name: The signature answers to a key this build ships
         run: |
           for attempt in 1 2 3; do
             sudo apt-get update -qq && sudo apt-get install -y -qq minisign && break
@@ -963,119 +970,52 @@ jobs:
           command -v minisign
           v="${{ needs.version.outputs.version }}"
 
-          jq -r '.plugins.updater.pubkey' app/src-tauri/tauri.conf.json | base64 -d > feed.pub
           for one in "dist/copanda-installer-$v-windows-x86_64.exe" \
                      "dist/copanda-$v-macos-aarch64.app.tar.gz" \
                      "dist/copanda-$v-macos-x86_64.app.tar.gz"; do
             [ -s "$one" ] || continue
             base64 -d < "$one.sig" > one.minisig
-            if ! minisign -Vm "$one" -p feed.pub -x one.minisig; then
-              echo "::error::$one was signed with a key that is not the one in \
-          tauri.conf.json. Every copy built from this tree carries that public key, so nothing \
-          could ever verify this update. Nothing was published."
+            if ! key=$(bash scripts/verify_update.sh "$one" one.minisig); then
+              echo "::error::$one was signed with a key that is neither the primary in \
+          tauri.conf.json nor the spare in updater-spare.pub. Every copy built from this tree \
+          carries only those two, so nothing could ever verify this update. Nothing was published."
               exit 1
             fi
+            echo "$one answers to the $key key"
             if ! bash scripts/signed_for.sh one.minisig "$v"; then
               echo "::error::$one is not signed for $v, and every copy refuses an update whose \
           signature does not name it. Nothing was published."
               exit 1
             fi
           done
-          rm -f feed.pub one.minisig
-          echo "the signatures and the shipped key are halves of the same pair, bound to $v"
+          rm -f one.minisig
+          echo "the signatures answer to a key every copy of $v carries, and are bound to $v"
 
+      # Frozen: the key a 2.x verifies against is gone, so these bytes can never change.
       - name: The manifest a 2.x can read
         if: vars.BRIDGE_MANIFEST == 'true'
         env:
-          RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
-          STORE_APP_ID: ${{ vars.STORE_APP_ID }}
           PRERELEASE: ${{ needs.version.outputs.prerelease }}
         run: |
-          v="${{ needs.version.outputs.version }}"
-          if [ -z "$RELEASE_PRIVATE_KEY" ]; then
-            echo "::error::BRIDGE_MANIFEST is on and RELEASE_PRIVATE_KEY is not, so the bridge \
-          would be a manifest no 2.x can verify. Nothing was written."
+          frozen=.github/bridge/release-manifest.json
+          if ! bash scripts/verify_manifest.sh "$frozen" "$frozen.sig" .github/v2-release-pubkey.txt; then
+            echo "::error::the frozen bridge does not verify against the key every 2.x carries, \
+          so no 2.x would read it. Nothing was published."
             exit 1
           fi
-
-          latest="${v%%-*}"
-          if [ "$PRERELEASE" = "false" ]; then
-            latest="$v"
-            code=$(curl -sSL --retry 5 --retry-all-errors --retry-delay 3 \
-                     -H "Cache-Control: no-cache" -o "$RUNNER_TEMP/live.json" -w '%{http_code}' \
-                     "https://github.com/${{ github.repository }}/releases/latest/download/release-manifest.json" \
-                   || echo 000)
-            if [ "$code" = "404" ]; then
-              echo "nothing is served there yet, so $v is the first"
-            elif [ "$code" != "200" ]; then
-              echo "::error::the manifest a 2.x reads answered $code, so whether $v walks it \
-          back cannot be known. Nothing was written."
-              exit 1
-            else
-              said=$(jq -r '.latest // ""' "$RUNNER_TEMP/live.json" 2>/dev/null || echo "")
-              if ! printf '%s' "$said" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-                echo "::error::the manifest a 2.x reads answered 200 and says «${said}», which is \
-          no version at all. Nothing was written."
-                exit 1
-              fi
-              echo "the manifest a 2.x reads today says $said"
-              if [ "$said" != "$v" ] \
-                 && [ "$(printf '%s\n%s\n' "$said" "$v" | sort -V | tail -1)" != "$v" ]; then
-                echo "::error::the manifest out there already says $said, and $v would walk it \
-          back. Nothing was written."
-                exit 1
-              fi
-            fi
-          fi
-
-          made="$RUNNER_TEMP/release-manifest.json"
-          jq --arg l "$latest" \
-             --arg u "https://github.com/${{ github.repository }}/releases/tag/${GITHUB_REF_NAME}" \
-             --arg store "$STORE_APP_ID" '
-            .latest = $l
-            | .releaseNotes.en.url = $u
-            | .releaseNotes.es.url = $u
-            | if $store == "" then del(.channels.msstore)
-              else .channels.msstore.url = "ms-windows-store://pdp/?productid=" + $store end
-          ' .github/bridge-manifest.json > "$made"
-
-          if grep -q PLACEHOLDER "$made"; then
-            echo "::error::a placeholder survived the bridge manifest"
+          said=$(jq -r '.latest // ""' "$frozen")
+          if ! printf '%s' "$said" | grep -qE '^([3-9]|[1-9][0-9]+)\.[0-9]+\.[0-9]+$'; then
+            echo "::error::the frozen bridge tells a 2.x about «${said}», which is no 3.x to cross to"
             exit 1
           fi
-
-          if ! jq -e '
-            def semver: split("-")[0] | split(".") as $p
-              | ($p | length) == 3 and ([$p[] | tonumber?] | length) == 3;
-            .schema == 1
-            and (.latest | semver)
-            and (.minimumSupported | semver)
-            and (.blockedVersions | type == "array")
-            and ([.severity] - ["patch", "minor", "major", "critical"] | length == 0)
-          ' "$made" > /dev/null; then
-            echo "::error::a 2.x would refuse this manifest whole: it wants schema 1, two \
-          three-number versions, an array of blocked ones, and a severity it knows. Anything \
-          else it drops without a word."
-            exit 1
-          fi
-
-          if [ "$(jq -r .severity "$made")" = "critical" ] \
-             || [ "$(jq -r '.blockedVersions | length' "$made")" != "0" ]; then
-            echo "::error::this manifest would put a 2.x behind its blocked-version screen and \
-          shut people out of a history only they have. The bridge invites; it does not lock."
-            exit 1
-          fi
-
-          printf '%s' "$RELEASE_PRIVATE_KEY" | bash scripts/sign_manifest.sh \
-            "$made" "$made.sig" .github/v2-release-pubkey.txt
-          cat "$made"
 
           if [ "$PRERELEASE" = "true" ]; then
-            echo "::notice::built and signed, and deliberately not attached: latest/download \
-          serves the last stable release, so no 2.x would ever read a candidate's copy"
+            echo "::notice::verified and deliberately not attached: latest/download serves the \
+          last stable release, so no 2.x would ever read a candidate's copy"
             exit 0
           fi
-          mv "$made" "$made.sig" dist/
+          cp "$frozen" "$frozen.sig" dist/
+          echo "the 2.x is told $said, as it has been since the bridge was frozen"
 
       - name: Checksums
         run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
@@ -1198,7 +1138,7 @@ jobs:
       - name: The feed
         run: |
           v="${{ needs.version.outputs.version }}"
-          base="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"
+          base="https://github.com/rgdevment/CopyPaste/releases/download/${GITHUB_REF_NAME}"
           win="copanda-installer-$v-windows-x86_64.exe"
           arm="copanda-$v-macos-aarch64.app.tar.gz"
           intel="copanda-$v-macos-x86_64.app.tar.gz"
@@ -1213,7 +1153,7 @@ jobs:
               exit 1
             fi
             jq -n --arg v "$v" \
-                  --arg n "https://github.com/${{ github.repository }}/releases/tag/${GITHUB_REF_NAME}" \
+                  --arg n "https://github.com/rgdevment/CopyPaste/releases/tag/${GITHUB_REF_NAME}" \
                   --arg wu "$base/$win" --arg ws "$ws" \
                   --arg au "$base/$arm" --arg as "$as" \
                   --arg iu "$base/$intel" --arg is "$is" \
@@ -1334,7 +1274,7 @@ jobs:
           v="${{ needs.version.outputs.version }}"
           file=latest.json
           if [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then file=candidate.json; fi
-          feed="https://raw.githubusercontent.com/${{ github.repository }}/manifest/$file"
+          feed="https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/$file"
 
           said=""
           for attempt in 1 2 3 4 5 6; do
@@ -1351,7 +1291,7 @@ jobs:
           if [ ! -s channel.json ] && [ "${{ needs.version.outputs.prerelease }}" = "true" ]; then
             ahead=$(curl -fsSL --retry 3 --retry-all-errors --retry-delay 3 \
                       -H "Cache-Control: no-cache" \
-                      "https://raw.githubusercontent.com/${{ github.repository }}/manifest/latest.json" \
+                      "https://raw.githubusercontent.com/rgdevment/CopyPaste/manifest/latest.json" \
                     | jq -r .version 2>/dev/null || echo "")
           fi
 
@@ -1381,22 +1321,20 @@ jobs:
             exit 1
           fi
 
-          jq -r '.plugins.updater.pubkey' app/src-tauri/tauri.conf.json | base64 -d > feed.pub
-
           for os in $(jq -r '.platforms | keys[]' channel.json); do
             url=$(jq -r --arg os "$os" '.platforms[$os].url' channel.json)
             jq -r --arg os "$os" '.platforms[$os].signature' channel.json | base64 -d > one.sig
 
             case "$url" in
-              "https://github.com/${{ github.repository }}/releases/download/v$v/"*) ;;
+              "https://github.com/rgdevment/CopyPaste/releases/download/v$v/"*) ;;
               *) echo "::error::$os points at $url, which is not the v$v release"; exit 1 ;;
             esac
 
             curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 -o one.bin "$url"
-            if minisign -Vm one.bin -p feed.pub -x one.sig; then
-              echo "$os verifies"
+            if key=$(bash scripts/verify_update.sh one.bin one.sig); then
+              echo "$os verifies against the $key key"
             else
-              echo "::error::$os does not verify against the key this build ships"
+              echo "::error::$os verifies against neither key this build ships"
               exit 1
             fi
             if ! bash scripts/signed_for.sh one.sig "$v"; then
@@ -1416,6 +1354,7 @@ jobs:
       && needs.version.outputs.prerelease == 'false'
     runs-on: windows-latest
     timeout-minutes: 20
+    environment: channels
     concurrency:
       group: release-msstore-${{ github.ref }}
       cancel-in-progress: false
@@ -1506,6 +1445,7 @@ jobs:
       && needs.version.outputs.macos == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    environment: channels
     concurrency:
       group: release-homebrew-${{ github.ref }}
       cancel-in-progress: false
@@ -1685,6 +1625,7 @@ jobs:
       && vars.WINGET_PUBLISH == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    environment: channels
     concurrency:
       group: release-winget-${{ github.ref }}
       cancel-in-progress: false

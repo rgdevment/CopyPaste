@@ -44,13 +44,13 @@ jobs:
           aside='^(app/src/|app/(biome\.json|index\.html|package(-lock)?\.json|stryker\.config\.json'
           aside+='|tsconfig(\.node)?\.json|vite\.config\.ts)$|hooks/|packaging/|resources/|[^/]+\.md$'
           aside+='|package(-lock)?\.json$|\.markdownlint(-cli2\.jsonc|\.yaml)$|\.editorconfig$|\.github/ISSUE_TEMPLATE/'
-          aside+='|\.github/(FUNDING|dependabot)\.yml$|\.github/(oversized\.txt|bridge-manifest\.json|v2-release-pubkey\.txt)$'
+          aside+='|\.github/(FUNDING|dependabot)\.yml$|\.github/(oversized\.txt|v2-release-pubkey\.txt)$|\.github/bridge/'
           aside+='|\.github/workflows/(advisories|bundle|caches|cla|commits|feed|mutants|mutants-sweep|release|rules)\.yml$'
-          aside+='|scripts/(branches|commits|mutants-report|news|rules|sign_manifest|signed_for|verify_manifest)\.sh$'
+          aside+='|scripts/(branches|commits|mutants-report|news|rules|signed_for|verify_manifest|verify_update)\.sh$'
           aside+='|scripts/(fill_manifest|generations|mutants_cover|mutants_score|oversized|workflows_parse)\.py$'
           aside+='|scripts/third-party\.mjs$|scripts/licences/)'
           # the Rust reads these with include_str!, so they are Rust wherever they live
-          included='^(app/src/(news\.json|locales\.ts)|THIRD-PARTY-(BUNDLED|LICENSES)\.md)$'
+          included='^(app/src/(news\.json|locales\.ts)|THIRD-PARTY-(BUNDLED|LICENSES)\.md|\.github/updater-retired\.pub)$'
           from=$(git merge-base "$BASE" HEAD)
           changed=$(git diff --name-only "$from" HEAD)
           first=$( { echo "$changed" | grep -E "$included"; echo "$changed" | grep -vE "$aside"; } \
