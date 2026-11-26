@@ -10,6 +10,8 @@ mod ready;
 mod report;
 mod reviving;
 mod settings;
+mod shop;
+mod staged;
 mod tray;
 mod trust;
 mod update;
@@ -73,6 +75,7 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             let fresh = settings::settle();
+            staged::apply_at_start(app.handle());
             let kept = settings::settings().ok();
             let spanish = tray::spanish(kept.as_ref().and_then(|one| one.locale.as_deref()));
             #[cfg(target_os = "macos")]
@@ -89,7 +92,7 @@ pub fn run() {
             panel::raise(app.handle());
             keys::raise(app.handle(), &kept.unwrap_or_else(keys::unread));
             welcome::raise(app.handle(), fresh);
-            update::keep_looking();
+            update::keep_looking(app.handle());
             Ok(())
         })
         .build(tauri::generate_context!())

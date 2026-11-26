@@ -34,6 +34,8 @@ export type Kept = {
   accent?: string;
   "panel-size"?: PanelSize;
   "high-contrast"?: boolean;
+  "updates-itself"?: boolean | null;
+  "updates-itself-put-off"?: string | null;
 };
 
 export type Offered = { id: string; label: string; css: string };
@@ -457,9 +459,19 @@ export function useTrust() {
 
 export type Route = "store" | "download";
 
-export type Ready = { version: string; installs: boolean };
+export type Coming = "queued" | "paused" | "notYet";
 
-export type Looked = { route: Route; looked: boolean; ready: Ready | null };
+export type Ready = { version: string; installs: boolean; coming?: Coming | null };
+
+export type Looked = {
+  route: Route;
+  looked: boolean;
+  ready: Ready | null;
+  notSold?: boolean;
+  replacesItself?: boolean;
+};
+
+export type Underway = { stage: "getting" | "installing"; far: number };
 
 export function troubleSaid(why: unknown): string {
   switch (String(why)) {
@@ -474,6 +486,10 @@ export function troubleSaid(why: unknown): string {
       return t("updateGone");
     case "busy":
       return t("updateBusy");
+    case "stopped":
+      return t("updateStopped");
+    case "unanswered":
+      return t("updateUnanswered");
     default:
       return t("updateFailed");
   }
@@ -483,8 +499,18 @@ export function useUpdate() {
   const [seen, setSeen] = useState<Looked | null>(null);
   const [busy, setBusy] = useState(false);
   const [trouble, setTrouble] = useState<string | null>(null);
+  const [step, setStep] = useState<Underway | null>(null);
   const alive = useRef(true);
   const inFlight = useRef(false);
+
+  useEffect(() => {
+    const heard = listen<Underway>("updating", (event) => {
+      if (alive.current) setStep(event.payload);
+    });
+    return () => {
+      void heard.then((drop) => drop());
+    };
+  }, []);
 
   useEffect(() => {
     alive.current = true;
@@ -518,28 +544,38 @@ export function useUpdate() {
   const install = useCallback(() => {
     setTrouble(null);
     setBusy(true);
-    invoke<void>("update_install").catch((why) => {
-      const said = String(why);
-      setTrouble(troubleSaid(said));
-      setBusy(false);
-      if (said === "gone" || said === "nothing") {
-        setSeen((was) => (was ? { ...was, ready: null } : was));
-      }
-    });
-  }, []);
+    const store = seen?.route === "store";
+    invoke<void>("update_install")
+      .then(() => {
+        if (!alive.current || !store) return;
+        setBusy(false);
+        setStep(null);
+        look(true);
+      })
+      .catch((why) => {
+        const said = String(why);
+        if (!alive.current) return;
+        setTrouble(troubleSaid(said));
+        setBusy(false);
+        setStep(null);
+        if (said === "gone" || said === "nothing") {
+          setSeen((was) => (was ? { ...was, ready: null } : was));
+        }
+      });
+  }, [look, seen?.route]);
 
-  return { seen, busy, trouble, look, install };
+  return { seen, busy, trouble, step, look, install };
 }
 
 const LOOKS_AGAIN = 60 * 60 * 1000;
 
 export function useWaiting() {
-  const [version, setVersion] = useState<string | null>(null);
+  const [seen, setSeen] = useState<Looked | null>(null);
   useEffect(() => {
     const ask = () => {
       invoke<Looked>("update_ready", { nowPlease: false })
-        .then((one) => setVersion(one.ready?.version ?? null))
-        .catch(() => setVersion(null));
+        .then(setSeen)
+        .catch(() => setSeen(null));
     };
     ask();
     const again = setInterval(ask, LOOKS_AGAIN);
@@ -549,5 +585,25 @@ export function useWaiting() {
       window.removeEventListener("focus", ask);
     };
   }, []);
-  return version;
+  return seen;
+}
+
+export function featureLine(version: string): string | null {
+  const [major, minor] = version.split(".");
+  const whole = /^\d+$/;
+  return whole.test(major ?? "") && whole.test(minor ?? "")
+    ? `${Number(major)}.${Number(minor)}`
+    : null;
+}
+
+export function asksToUpdateItself(
+  seen: Looked | null,
+  kept: Kept | null,
+  here: string | null,
+): boolean {
+  if (!kept || !here || (kept["updates-itself"] ?? null) !== null) return false;
+  const ready = seen?.route === "download" && seen.ready?.installs ? seen.ready : null;
+  const offered = ready ? featureLine(ready.version) : null;
+  if (!offered) return false;
+  return offered !== featureLine(here) && offered !== (kept["updates-itself-put-off"] ?? null);
 }

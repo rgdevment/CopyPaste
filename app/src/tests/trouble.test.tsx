@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import About from "../ui/About";
 
+const nothing = () => Promise.resolve();
+
 type Invoke = (what: string, args?: never) => Promise<unknown>;
 
 async function answering(answers: Record<string, () => Promise<unknown>>) {
@@ -35,7 +37,7 @@ describe("the buttons for when something goes wrong", () => {
     const said = await answering({ save_report: () => Promise.resolve("/donde/informe.txt") });
     undo.push(said.undo);
     const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     await who.click(await screen.findByRole("button", { name: "Guardar informe…" }));
     expect(await screen.findByText("Informe guardado.")).toBeDefined();
@@ -49,7 +51,7 @@ describe("the buttons for when something goes wrong", () => {
     const who = userEvent.setup();
     const said = await answering({ save_report: () => Promise.resolve(null) });
     undo.push(said.undo);
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     const button = await screen.findByRole("button", { name: "Guardar informe…" });
     await who.click(button);
@@ -62,7 +64,7 @@ describe("the buttons for when something goes wrong", () => {
     const who = userEvent.setup();
     const said = await answering({ save_report: () => Promise.reject("denied") });
     undo.push(said.undo);
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     await who.click(await screen.findByRole("button", { name: "Guardar informe…" }));
     expect(await screen.findByText("No se pudo guardar el informe")).toBeDefined();
@@ -74,7 +76,7 @@ describe("the buttons for when something goes wrong", () => {
     undo.push(said.undo);
     const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
     vi.mocked(revealItemInDir).mockRejectedValueOnce("gone");
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     await who.click(await screen.findByRole("button", { name: "Guardar informe…" }));
     await who.click(await screen.findByRole("button", { name: "Mostrar en la carpeta" }));
@@ -85,7 +87,7 @@ describe("the buttons for when something goes wrong", () => {
     const who = userEvent.setup();
     const said = await answering({ open_log: () => Promise.reject("denied") });
     undo.push(said.undo);
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     await who.click(await screen.findByRole("button", { name: "Abrir el registro" }));
     expect(said.asked).toEqual(["open_log"]);

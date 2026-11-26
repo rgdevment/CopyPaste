@@ -19,6 +19,7 @@ pub mod permissions;
 pub mod pointer;
 pub mod reading;
 pub mod source;
+pub mod store;
 pub mod theme;
 pub mod thumbnail;
 pub mod window;

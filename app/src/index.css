@@ -815,6 +815,37 @@ button:disabled {
   padding: 11px 13px;
 }
 
+.newer .asks {
+  margin-top: 6px;
+}
+
+.newer .asks .answers {
+  margin-top: 2px;
+}
+
+.newer .asks .welcome-link {
+  font-size: inherit;
+}
+
+.newer .asks i {
+  margin: 0 6px;
+  font-style: normal;
+}
+
+.newer .bar {
+  margin-top: 6px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--selected-edge);
+  overflow: hidden;
+}
+
+.newer .bar > span {
+  margin: 0;
+  height: 100%;
+  background: var(--accent);
+}
+
 .pip {
   width: 8px;
   height: 8px;

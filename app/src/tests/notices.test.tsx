@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { composed } from "../markdown";
 import About from "../ui/About";
 
+const nothing = () => Promise.resolve();
+
 type Invoke = (what: string, args?: never) => Promise<unknown>;
 
 async function answering(notices: () => Promise<string>) {
@@ -35,7 +37,7 @@ describe("the notices each bundled licence asks for", () => {
     const who = userEvent.setup();
     const said = await answering(() => Promise.resolve("MIT License\n\nCopyright (c) alguien"));
     undo.push(said.undo);
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     const button = await screen.findByRole("button", { name: "Avisos de terceros" });
     expect(said.asked()).toBe(0);
@@ -60,7 +62,7 @@ describe("the notices each bundled licence asks for", () => {
       ),
     );
     undo.push(said.undo);
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     await who.click(await screen.findByRole("button", { name: "Avisos de terceros" }));
 
@@ -75,7 +77,7 @@ describe("the notices each bundled licence asks for", () => {
     const who = userEvent.setup();
     const said = await answering(() => Promise.resolve("<img src=x onerror=alert(1)> y nada más"));
     undo.push(said.undo);
-    const { container } = render(<About />);
+    const { container } = render(<About kept={null} change={nothing} />);
 
     await who.click(await screen.findByRole("button", { name: "Avisos de terceros" }));
 
@@ -88,7 +90,7 @@ describe("the notices each bundled licence asks for", () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const said = await answering(() => Promise.resolve("Ver https://crates.io/crates/slint"));
     undo.push(said.undo);
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     await who.click(await screen.findByRole("button", { name: "Avisos de terceros" }));
     await who.click(await screen.findByRole("link", { name: "https://crates.io/crates/slint" }));
@@ -114,7 +116,7 @@ describe("the notices each bundled licence asks for", () => {
       return tries === 1 ? Promise.reject(new Error("no")) : Promise.resolve("MIT License");
     });
     undo.push(said.undo);
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     const button = await screen.findByRole("button", { name: "Avisos de terceros" });
     await who.click(button);
@@ -139,7 +141,7 @@ describe("the notices each bundled licence asks for", () => {
       );
     }) as never);
     undo.push(() => vi.mocked(invoke).mockImplementation(real as never));
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     const button = await screen.findByRole("button", { name: "Textos de las licencias" });
     expect(asked).toBe(0);
@@ -163,7 +165,7 @@ describe("the notices each bundled licence asks for", () => {
     vi.mocked(invoke).mockImplementation(((what: string, args?: never) =>
       what === "licences" ? Promise.reject(new Error("no")) : real(what, args)) as never);
     undo.push(() => vi.mocked(invoke).mockImplementation(real as never));
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     await who.click(await screen.findByRole("button", { name: "Textos de las licencias" }));
 
@@ -187,7 +189,7 @@ describe("the notices each bundled licence asks for", () => {
     const who = userEvent.setup();
     const said = await answering(() => Promise.reject(new Error("no")));
     undo.push(said.undo);
-    render(<About />);
+    render(<About kept={null} change={nothing} />);
 
     await who.click(await screen.findByRole("button", { name: "Avisos de terceros" }));
 
