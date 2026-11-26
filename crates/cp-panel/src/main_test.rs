@@ -375,3 +375,261 @@ fn with_one_click_off_a_double_click_on_the_image_grid_still_pastes() {
     assert!(bench.tapped.borrow().is_empty());
     assert_eq!(*bench.pasted.borrow(), [2]);
 }
+
+fn theme_of(panel: &Panel) -> crate::Theme<'_> {
+    panel.global::<crate::Theme>()
+}
+
+#[test]
+fn the_lit_edge_is_the_accent_only_with_contrast() {
+    let bench = bench(1);
+    let theme = theme_of(&bench.panel);
+    theme.set_contrast(false);
+    assert_eq!(theme.get_lit_edge(), theme.get_card_edge());
+    let swatch_edge = theme.get_selected_edge();
+    theme.set_contrast(true);
+    assert_eq!(theme.get_lit_edge(), theme.get_accent());
+    assert_eq!(
+        theme.get_selected_edge(),
+        swatch_edge,
+        "contrast leaves the swatch and chip borders alone"
+    );
+}
+
+#[test]
+fn contrast_darkens_the_text_outlines_the_cards_and_thickens_the_type() {
+    let bench = bench(1);
+    let theme = theme_of(&bench.panel);
+    theme.set_contrast(false);
+    let (body, edge, weight, mid, bar, light_body) = (
+        theme.get_body(),
+        theme.get_card_edge(),
+        theme.get_fw_title(),
+        theme.get_fw_mid(),
+        theme.get_lit_bar(),
+        theme.get_fw_body(),
+    );
+    assert_eq!(edge.alpha(), 0, "no outline without contrast");
+    assert_eq!((light_body, mid, weight), (400, 500, 600));
+    assert_eq!(bar, 3.0);
+
+    theme.set_contrast(true);
+    assert_ne!(theme.get_body(), body);
+    assert_ne!(theme.get_card_edge().alpha(), 0, "cards get an outline");
+    assert_eq!(theme.get_fw_body(), 500);
+    assert_eq!(theme.get_fw_mid(), 600);
+    assert_eq!(theme.get_fw_title(), 700);
+    assert_eq!(theme.get_lit_bar(), 4.0);
+}
+
+#[test]
+fn the_gap_between_rows_follows_listing() {
+    let bench = bench(1);
+    let theme = theme_of(&bench.panel);
+    theme.set_listing(false);
+    assert_eq!(theme.get_row_gap(), 6.0);
+    theme.set_listing(true);
+    assert_eq!(theme.get_row_gap(), 2.0);
+    assert_eq!(theme.get_row_listed(), 32.0);
+}
+
+use crate::odd;
+
+const AREAS: [(f64, f64); 2] = [(1920.0, 1032.0), (1366.0, 728.0)];
+
+const TEXT_SIZES: [cp_config::TextSize; 4] = [
+    cp_config::TextSize::Small,
+    cp_config::TextSize::Normal,
+    cp_config::TextSize::Large,
+    cp_config::TextSize::Larger,
+];
+
+const DENSITIES: [cp_config::Density; 4] = [
+    cp_config::Density::Compact,
+    cp_config::Density::Normal,
+    cp_config::Density::Comfortable,
+    cp_config::Density::List,
+];
+
+const KINDS: [cp_core::kind::Kind; 4] = [
+    cp_core::kind::Kind::Text,
+    cp_core::kind::Kind::Link,
+    cp_core::kind::Kind::Json,
+    cp_core::kind::Kind::File,
+];
+
+fn odd_cards(density: cp_config::Density) -> Vec<Card> {
+    let mut id = 0;
+    let mut cards = Vec::new();
+    for kind in KINDS {
+        for (_, text) in odd::texts() {
+            id += 1;
+            let row = cp_store::Listed {
+                id,
+                modified_at: 1_000_000,
+                created_at: 1_000_000,
+                kind: Some(kind),
+                preview: text,
+                app: Some("Mail".into()),
+                label: None,
+                color: 0,
+                thumb_path: None,
+                paste_count: 2,
+                last_used_at: None,
+                broken_since: None,
+                pinned: id % 7 == 0,
+                group: String::new(),
+                snippet: None,
+            };
+            let mut card = crate::view::card_of(&row, 2_000_000, None, density.shut_lines());
+            card.shut_px = if density.lists() { 32.0 } else { SHUT };
+            card.open_px = OPEN;
+            cards.push(card);
+        }
+    }
+    cards
+}
+
+fn dressed_bench(
+    size: cp_config::PanelSize,
+    density: cp_config::Density,
+    contrast: bool,
+    light: bool,
+) -> Bench {
+    let bench = bench(0);
+    let theme = theme_of(&bench.panel);
+    theme.set_contrast(contrast);
+    theme.set_light(light);
+    theme.set_listing(density.lists());
+    let (width, height) = size.wanted();
+    theme.set_wanted_width(width);
+    theme.set_wanted_height(height.unwrap_or(0.0));
+    bench.cards.set_vec(odd_cards(density));
+    tick(300);
+    bench
+}
+
+fn failures_of_the_fit(
+    bench: &Bench,
+    size: cp_config::PanelSize,
+    label: &str,
+    failed: &mut Vec<String>,
+) {
+    let theme = theme_of(&bench.panel);
+    let wanted = size.wanted();
+    for area in AREAS {
+        for text in TEXT_SIZES {
+            let zoom = text.zoom();
+            let (width, height) =
+                crate::sizing::fitted((wanted.0, wanted.1.unwrap_or(0.0)), zoom, area);
+            let (shown_width, shown_height) = (f64::from(width * zoom), f64::from(height * zoom));
+            let fits = width > 0.0
+                && height > 0.0
+                && shown_width <= area.0 - 16.0 + 1e-3
+                && shown_height <= area.1 - 16.0 + 1e-3
+                && (wanted.1.is_some() || (shown_height - (area.1 - 16.0)).abs() < 1e-2);
+            if !fits {
+                failed.push(format!(
+                    "{label} {area:?} {text:?}: {shown_width} x {shown_height}"
+                ));
+            }
+            theme.set_zoom(zoom);
+            theme.set_width(width);
+            theme.set_height(height);
+            bench
+                .panel
+                .window()
+                .set_size(slint::LogicalSize::new(width, height));
+            tick(50);
+            if !bench.panel.get_viewport_height().is_finite() {
+                failed.push(format!("{label} {area:?} {text:?}: no viewport"));
+            }
+        }
+    }
+}
+
+fn failures_of_the_theme(
+    bench: &Bench,
+    density: cp_config::Density,
+    contrast: bool,
+    label: &str,
+    failed: &mut Vec<String>,
+) {
+    let theme = theme_of(&bench.panel);
+    let (listing, lit, edge, accent) = (
+        theme.get_row_gap(),
+        theme.get_lit_edge(),
+        theme.get_card_edge(),
+        theme.get_accent(),
+    );
+    let weights = (
+        theme.get_fw_body(),
+        theme.get_fw_mid(),
+        theme.get_fw_title(),
+    );
+    let body = theme.get_body();
+    theme.set_contrast(!contrast);
+    let other_body = theme.get_body();
+    theme.set_contrast(contrast);
+    let checks = [
+        (
+            listing == if density.lists() { 2.0 } else { 6.0 },
+            "row-gap",
+        ),
+        (theme.get_row_listed() == 32.0, "row-listed"),
+        (lit == if contrast { accent } else { edge }, "lit-edge"),
+        ((edge.alpha() != 0) == contrast, "card-edge"),
+        (
+            weights
+                == if contrast {
+                    (500, 600, 700)
+                } else {
+                    (400, 500, 600)
+                },
+            "weights",
+        ),
+        (body != other_body, "body"),
+        (
+            bench.cards.row_count() == KINDS.len() * odd::texts().len(),
+            "cards",
+        ),
+    ];
+    for (held, what) in checks {
+        if !held {
+            failed.push(format!("{label}: {what}"));
+        }
+    }
+}
+
+fn every_look_of(size: cp_config::PanelSize) -> Vec<String> {
+    let mut failed = Vec::new();
+    for density in DENSITIES {
+        for contrast in [false, true] {
+            for light in [false, true] {
+                let label = format!("{size:?} {density:?} contrast={contrast} light={light}");
+                let bench = dressed_bench(size, density, contrast, light);
+                failures_of_the_theme(&bench, density, contrast, &label, &mut failed);
+                failures_of_the_fit(&bench, size, &label, &mut failed);
+            }
+        }
+    }
+    failed
+}
+
+#[test]
+fn a_normal_panel_holds_odd_cards_in_every_density_contrast_and_light() {
+    let failed = every_look_of(cp_config::PanelSize::Normal);
+    assert!(failed.is_empty(), "{}", failed.join("\n"));
+}
+
+#[test]
+fn a_large_panel_holds_odd_cards_in_every_density_contrast_and_light() {
+    let failed = every_look_of(cp_config::PanelSize::Large);
+    assert!(failed.is_empty(), "{}", failed.join("\n"));
+}
+
+#[test]
+fn a_tall_panel_holds_odd_cards_in_every_density_contrast_and_light() {
+    let failed = every_look_of(cp_config::PanelSize::Tall);
+    assert!(failed.is_empty(), "{}", failed.join("\n"));
+}

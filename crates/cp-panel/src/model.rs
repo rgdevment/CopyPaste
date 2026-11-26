@@ -24,6 +24,8 @@ pub struct Metrics {
     pub frame: f32,
     pub line: f32,
     pub shut_lines: i32,
+    pub listed: bool,
+    pub listed_row: f32,
 }
 
 const EDGE: f32 = 8.0;
@@ -72,6 +74,9 @@ pub fn meta_keys_for(filter: &Filter) -> &'static [&'static str] {
 }
 
 pub fn shut_height_for(filter: &Filter, metrics: &Metrics, plain_way: bool) -> f32 {
+    if metrics.listed {
+        return metrics.listed_row;
+    }
     if plain_way {
         return metrics.plain;
     }
@@ -354,6 +359,9 @@ impl Rows {
         let Some(row) = rows.get(index) else {
             return self.metrics.plain;
         };
+        if self.metrics.listed {
+            return self.metrics.listed_row;
+        }
         if wears_cards(self.plain_way) {
             return crate::view::face_for(row, has_thumb, self.metrics.shut_lines).shut_px();
         }
@@ -475,6 +483,8 @@ impl Rows {
         let without_thumb = if heads { self.metrics.head } else { 0.0 }
             + if self.open.get() == Some(index) {
                 self.open_of_row(row)
+            } else if self.metrics.listed {
+                self.metrics.listed_row
             } else if wears_cards(self.plain_way) {
                 crate::view::face_for(row, false, self.metrics.shut_lines).shut_px()
             } else if was_found(row) {

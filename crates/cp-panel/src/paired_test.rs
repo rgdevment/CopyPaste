@@ -17,6 +17,8 @@ const SIZES: Metrics = Metrics {
     frame: 50.0,
     line: 18.0,
     shut_lines: 2,
+    listed: false,
+    listed_row: 32.0,
 };
 
 fn grid_over(count: usize) -> (Rc<Rows>, Rc<Paired>) {

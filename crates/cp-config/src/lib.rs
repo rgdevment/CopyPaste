@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 pub mod look;
 
-pub use look::{Accent, Density, TextSize};
+pub use look::{Accent, Density, PanelSize, TextSize};
 
 pub const FILE: &str = "config.toml";
 
@@ -88,6 +88,9 @@ pub struct Config {
     pub code_font: Option<String>,
     #[serde(with = "look::lenient")]
     pub accent: Accent,
+    #[serde(with = "look::lenient")]
+    pub panel_size: PanelSize,
+    pub high_contrast: bool,
 }
 
 mod count {
@@ -132,6 +135,8 @@ impl Default for Config {
             font: None,
             code_font: None,
             accent: Accent::default(),
+            panel_size: PanelSize::default(),
+            high_contrast: false,
         }
     }
 }

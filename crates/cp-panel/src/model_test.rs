@@ -1,5 +1,7 @@
 use super::*;
 
+const LISTED_ROW: f32 = 32.0;
+
 const SIZES: Metrics = Metrics {
     body_json: 59.0,
     body_link: 36.0,
@@ -15,6 +17,8 @@ const SIZES: Metrics = Metrics {
     frame: 50.0,
     line: 18.0,
     shut_lines: 2,
+    listed: false,
+    listed_row: 32.0,
 };
 
 fn store_with(count: usize) -> Rc<Store> {
@@ -948,4 +952,253 @@ fn an_open_card_that_is_renewed_keeps_its_open_height() {
         .expect("thumb");
     assert!(rows.renew(id));
     assert_eq!(rows.span_of(at), Some(opened));
+}
+
+const LISTED: Metrics = Metrics {
+    listed: true,
+    ..SIZES
+};
+
+fn listed_rows(store: Rc<Store>, filter: Filter, plain_way: bool) -> Rc<Rows> {
+    Rows::open(store, filter, 1_000, LISTED, plain_way, None)
+}
+
+#[test]
+fn a_listed_text_row_is_one_short_line_high() {
+    let rows = listed_rows(store_with(3), Filter::default(), false);
+    for at in 0..3 {
+        assert_eq!(rows.span_of(at).map(|span| span.1), Some(LISTED_ROW));
+        assert_eq!(rows.row_data(at).map(|card| card.shut_px), Some(LISTED_ROW));
+    }
+    assert_eq!(rows.span_of(2), Some((2.0 * LISTED_ROW, LISTED_ROW)));
+}
+
+#[test]
+fn a_listed_row_with_a_thumbnail_is_as_short_as_any_other() {
+    let (store, id) = store_with_a_picture();
+    let dir = tempfile::tempdir().expect("a folder");
+    store
+        .set_thumb(id, Some(&png_in(dir.path())), 3)
+        .expect("thumb");
+    let rows = listed_rows(store, Filter::default(), false);
+    let at = rows.index_of(id).expect("listed");
+    let card = rows.row_data(at).expect("a card");
+    assert!(card.has_thumb);
+    assert_eq!(rows.span_of(at).map(|span| span.1), Some(LISTED_ROW));
+    assert_eq!(card.shut_px, LISTED_ROW);
+
+    let tall = Rows::open(
+        rows.store.clone(),
+        Filter {
+            kinds: vec![cp_core::kind::Kind::Image],
+            ..Default::default()
+        },
+        1_000,
+        LISTED,
+        false,
+        None,
+    );
+    assert_eq!(tall.span_of(0).map(|span| span.1), Some(LISTED_ROW));
+}
+
+#[test]
+fn a_listed_row_that_was_found_is_as_short_as_any_other() {
+    let rows = Rows::open(
+        store_with(3),
+        Filter {
+            query: Some("elemento".into()),
+            ..Default::default()
+        },
+        1_000,
+        LISTED,
+        false,
+        None,
+    );
+    assert_eq!(rows.row_count(), 3);
+    for at in 0..3 {
+        assert_eq!(rows.span_of(at).map(|span| span.1), Some(LISTED_ROW));
+    }
+}
+
+#[test]
+fn the_open_row_of_a_list_keeps_its_open_height() {
+    let store = Store::in_memory().expect("esquema");
+    store.insert_text("u0", "corto", 0).expect("insert");
+    store
+        .insert_text("u1", &"palabra ".repeat(40), 1)
+        .expect("insert");
+    let rows = listed_rows(Rc::new(store), Filter::default(), false);
+    let long = crate::face::open_px(6.0 * crate::face::LINE);
+    rows.open_at(Some(0));
+    assert_eq!(rows.span_of(0), Some((0.0, long)));
+    assert_eq!(rows.span_of(1), Some((long, LISTED_ROW)));
+    rows.open_at(None);
+    assert_eq!(rows.span_of(0), Some((0.0, LISTED_ROW)));
+}
+
+#[test]
+fn a_listed_group_head_still_adds_its_heading() {
+    let store = Store::in_memory().expect("esquema");
+    for (at, group) in ["a.test", "a.test", "b.test"].iter().enumerate() {
+        let id = store
+            .insert_text(
+                &format!("u{at}"),
+                &format!("https://{group}/{at}"),
+                at as i64,
+            )
+            .expect("insert");
+        store.set_group(id, group).expect("grouped");
+    }
+    let grouped = Filter {
+        order: cp_store::Order::ByGroup,
+        ..Default::default()
+    };
+    let rows = listed_rows(Rc::new(store), grouped, false);
+    for at in 0..rows.row_count() {
+        let card = rows.row_data(at).expect("a card");
+        let wanted = if card.heads_group {
+            LISTED_ROW + SIZES.head
+        } else {
+            LISTED_ROW
+        };
+        assert_eq!(
+            rows.span_of(at).map(|span| span.1),
+            Some(wanted),
+            "row {at}"
+        );
+    }
+}
+
+#[test]
+fn the_shut_height_of_a_list_is_the_same_for_every_view() {
+    let only_json = Filter {
+        kinds: vec![cp_core::kind::Kind::Json],
+        ..Default::default()
+    };
+    for plain_way in [false, true] {
+        assert_eq!(
+            shut_height_for(&Filter::default(), &LISTED, plain_way),
+            LISTED_ROW
+        );
+        assert_eq!(shut_height_for(&only_json, &LISTED, plain_way), LISTED_ROW);
+    }
+    assert_eq!(LISTED_ROW, 32.0);
+}
+
+use crate::odd;
+
+const DENSITIES: [cp_config::Density; 4] = [
+    cp_config::Density::Compact,
+    cp_config::Density::Normal,
+    cp_config::Density::Comfortable,
+    cp_config::Density::List,
+];
+
+fn metrics_of(density: cp_config::Density) -> Metrics {
+    Metrics {
+        shut_lines: density.shut_lines(),
+        listed: density.lists(),
+        ..SIZES
+    }
+}
+
+fn store_of_odd_text() -> (Rc<Store>, usize) {
+    let store = Store::in_memory().expect("esquema");
+    let texts = odd::texts();
+    for (at, (name, text)) in texts.iter().enumerate() {
+        let id = store
+            .insert_text(&format!("u{at}"), text, at as i64)
+            .unwrap_or_else(|why| panic!("{name}: {why:?}"));
+        store.set_group(id, ["a", "a", "b"][at % 3]).expect("group");
+    }
+    (Rc::new(store), texts.len())
+}
+
+fn odd_rows(density: cp_config::Density, plain_way: bool, grouped: bool) -> (Rc<Rows>, usize) {
+    let (store, count) = store_of_odd_text();
+    let filter = Filter {
+        order: if grouped {
+            cp_store::Order::ByGroup
+        } else {
+            cp_store::Order::Recent
+        },
+        ..Default::default()
+    };
+    let rows = Rows::open(store, filter, 1_000, metrics_of(density), plain_way, None);
+    (rows, count)
+}
+
+#[test]
+fn every_odd_row_of_a_list_is_exactly_one_row_high_and_the_others_stay_finite() {
+    let mut failed = Vec::new();
+    for density in DENSITIES {
+        for plain_way in [false, true] {
+            for grouped in [false, true] {
+                let (rows, count) = odd_rows(density, plain_way, grouped);
+                assert_eq!(rows.row_count(), count);
+                for at in 0..count {
+                    let card = rows.row_data(at).expect("a card");
+                    let (_, span) = rows.span_of(at).expect("a span");
+                    let head = if card.heads_group { SIZES.head } else { 0.0 };
+                    let ok = if density.lists() {
+                        span == LISTED_ROW + head
+                    } else {
+                        span.is_finite() && span > head
+                    };
+                    if !ok {
+                        failed.push(format!(
+                            "{density:?} plain={plain_way} grouped={grouped} row {at}: {span}"
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    assert!(failed.is_empty(), "{}", failed.join("\n"));
+}
+
+#[test]
+fn every_odd_row_keeps_a_finite_positive_open_height_and_closes_back() {
+    let mut failed = Vec::new();
+    for density in DENSITIES {
+        for plain_way in [false, true] {
+            let (rows, count) = odd_rows(density, plain_way, false);
+            let shut: Vec<f32> = (0..count)
+                .filter_map(|at| rows.span_of(at))
+                .map(|s| s.1)
+                .collect();
+            for at in 0..count {
+                rows.open_at(Some(at));
+                let (_, open) = rows.span_of(at).expect("a span");
+                if !(open.is_finite() && open > 0.0) || (density.lists() && open < LISTED_ROW) {
+                    failed.push(format!("{density:?} plain={plain_way} row {at}: {open}"));
+                }
+                rows.open_at(None);
+            }
+            let again: Vec<f32> = (0..count)
+                .filter_map(|at| rows.span_of(at))
+                .map(|s| s.1)
+                .collect();
+            if again != shut {
+                failed.push(format!(
+                    "{density:?} plain={plain_way}: heights moved after closing"
+                ));
+            }
+        }
+    }
+    assert!(failed.is_empty(), "{}", failed.join("\n"));
+}
+
+#[test]
+fn the_tops_of_odd_rows_only_ever_grow() {
+    for density in DENSITIES {
+        let (rows, count) = odd_rows(density, false, true);
+        let mut last = -1.0_f32;
+        for at in 0..count {
+            let (top, span) = rows.span_of(at).expect("a span");
+            assert!(top.is_finite() && top > last, "{density:?} row {at}: {top}");
+            assert!(span > 0.0, "{density:?} row {at}");
+            last = top;
+        }
+    }
 }

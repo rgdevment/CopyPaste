@@ -9,6 +9,7 @@ export component Chooser inherits Window {
     always-on-top: true;
     background: Theme.apple ? Theme.panel : transparent;
     default-font-family: Theme.font;
+    default-font-weight: Theme.fw-body;
     title: "CoPanda";
 
     in property <[FormRow]> rows;
@@ -95,7 +96,7 @@ export component Chooser inherits Window {
                     text: root.subject;
                     color: Theme.title;
                     font-size: Theme.fs-small;
-                    font-weight: 600;
+                    font-weight: Theme.fw-title;
                     vertical-alignment: center;
                     overflow: elide;
                     horizontal-stretch: 1;
@@ -162,7 +163,7 @@ export component Chooser inherits Window {
                             text: at + 1;
                             color: chosen-here ? Theme.accent : Theme.muted;
                             font-size: Theme.fs-caption;
-                            font-weight: 600;
+                            font-weight: Theme.fw-title;
                             horizontal-alignment: center;
                             vertical-alignment: center;
                         }

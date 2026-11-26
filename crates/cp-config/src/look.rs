@@ -30,15 +30,41 @@ pub enum Density {
     #[default]
     Normal,
     Comfortable,
+    List,
 }
 
 impl Density {
     #[must_use]
     pub fn shut_lines(self) -> i32 {
         match self {
-            Self::Compact => 1,
+            Self::Compact | Self::List => 1,
             Self::Normal => 2,
             Self::Comfortable => 3,
+        }
+    }
+
+    #[must_use]
+    pub fn lists(self) -> bool {
+        self == Self::List
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum PanelSize {
+    #[default]
+    Normal,
+    Large,
+    Tall,
+}
+
+impl PanelSize {
+    #[must_use]
+    pub fn wanted(self) -> (f32, Option<f32>) {
+        match self {
+            Self::Normal => (480.0, Some(620.0)),
+            Self::Large => (560.0, Some(800.0)),
+            Self::Tall => (480.0, None),
         }
     }
 }

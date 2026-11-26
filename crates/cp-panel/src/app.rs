@@ -93,6 +93,8 @@ impl App {
             frame: theme.get_row_frame(),
             line: theme.get_line(),
             shut_lines: kept.look.density.shut_lines(),
+            listed: kept.look.density.lists(),
+            listed_row: theme.get_row_listed(),
         };
         let generation = Arc::new(AtomicU64::new(0));
         let counter = spawn_counter(options.db.clone(), panel.as_weak(), generation.clone());
@@ -650,7 +652,11 @@ impl App {
                 ui.set_chips_scroll(0.0);
                 stop_lingering(&ui, &state.borrow().lingering);
                 let kept = state.borrow().kept.get();
-                state.borrow_mut().metrics.shut_lines = kept.look.density.shut_lines();
+                {
+                    let metrics = &mut state.borrow_mut().metrics;
+                    metrics.shut_lines = kept.look.density.shut_lines();
+                    metrics.listed = kept.look.density.lists();
+                }
                 ui.set_one_click(kept.one_click);
                 dress_theme(ui.global::<crate::Theme>(), kept);
                 ui.set_update_line(newer_line().into());
@@ -1298,6 +1304,11 @@ pub fn dress_theme(theme: crate::Theme<'_>, kept: crate::kept::Kept) {
     theme.set_font(look.font.as_str().into());
     theme.set_mono_font(look.mono.as_str().into());
     theme.set_zoom(look.size.zoom());
+    theme.set_contrast(look.contrast);
+    theme.set_listing(look.density.lists());
+    let (width, height) = look.panel_size.wanted();
+    theme.set_wanted_width(width);
+    theme.set_wanted_height(height.unwrap_or(0.0));
 }
 
 fn newer_line() -> String {

@@ -11,7 +11,9 @@ export type Look = "system" | "light" | "dark";
 
 export type TextSize = "small" | "normal" | "large" | "larger";
 
-export type Density = "compact" | "normal" | "comfortable";
+export type Density = "compact" | "normal" | "comfortable" | "list";
+
+export type PanelSize = "normal" | "large" | "tall";
 
 export type PasteWith = "double-click" | "single-click";
 
@@ -30,6 +32,8 @@ export type Kept = {
   font?: string | null;
   "code-font"?: string | null;
   accent?: string;
+  "panel-size"?: PanelSize;
+  "high-contrast"?: boolean;
 };
 
 export type Offered = { id: string; label: string; css: string };
@@ -53,11 +57,18 @@ export type Choices = {
 
 export const SIZES: TextSize[] = ["small", "normal", "large", "larger"];
 
-export const DENSITIES: Density[] = ["compact", "normal", "comfortable"];
+export const DENSITIES: Density[] = ["compact", "normal", "comfortable", "list"];
+
+export const PANEL_SIZES: PanelSize[] = ["normal", "large", "tall"];
 
 export const ZOOM: Record<TextSize, number> = { small: 0.92, normal: 1, large: 1.08, larger: 1.16 };
 
-export const SHUT_LINES: Record<Density, number> = { compact: 1, normal: 2, comfortable: 3 };
+export const SHUT_LINES: Record<Density, number> = {
+  compact: 1,
+  normal: 2,
+  comfortable: 3,
+  list: 1,
+};
 
 export const PLAIN_LOOK: Partial<Kept> = {
   "text-size": "normal",
@@ -65,6 +76,8 @@ export const PLAIN_LOOK: Partial<Kept> = {
   font: null,
   "code-font": null,
   accent: "indigo",
+  "panel-size": "normal",
+  "high-contrast": false,
 };
 
 export function useChoices() {

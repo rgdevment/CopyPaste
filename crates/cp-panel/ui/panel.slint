@@ -16,6 +16,7 @@ export component Panel inherits Window {
     always-on-top: true;
     background: Theme.apple ? Theme.panel : transparent;
     default-font-family: Theme.font;
+    default-font-weight: Theme.fw-body;
     title: "CoPanda";
     icon: @image-url("../../../app/src-tauri/icons/128x128.png");
 
@@ -559,7 +560,7 @@ export component Panel inherits Window {
                         text: root.empty-title;
                         color: Theme.title;
                         font-size: Theme.fs-body;
-                        font-weight: 600;
+                        font-weight: Theme.fw-title;
                         horizontal-alignment: center;
                         wrap: word-wrap;
                     }
@@ -679,7 +680,7 @@ export component Panel inherits Window {
                                     text: card.group-said;
                                     color: Theme.title;
                                     font-size: Theme.fs-meta;
-                                    font-weight: 600;
+                                    font-weight: Theme.fw-title;
                                     vertical-alignment: center;
                                 }
                                 Rectangle {
@@ -718,7 +719,7 @@ export component Panel inherits Window {
                             dragged(id) => { root.dragged(id); }
                             x: 10px;
                             width: parent.width - 20px;
-                            height: parent.height - (card.heads-group ? Theme.row-head : 0px) - 6px;
+                            height: parent.height - (card.heads-group ? Theme.row-head : 0px) - (self.open ? 6px : Theme.row-gap);
                             chosen(id, px, py) => {
                                 if (root.last-chosen >= 0 && animation-tick() - root.last-at < Theme.double-click
                                     && (px - root.last-x) * (px - root.last-x) / 1px + (py - root.last-y) * (py - root.last-y) / 1px
@@ -913,7 +914,7 @@ export component Panel inherits Window {
                             text: root.sheet-title;
                             color: Theme.muted;
                             font-size: Theme.fs-caption;
-                            font-weight: 600;
+                            font-weight: Theme.fw-title;
                             letter-spacing: 0.6px;
                             vertical-alignment: center;
                         }
@@ -963,7 +964,7 @@ export component Panel inherits Window {
                                     text: at + 1;
                                     color: chosen-here ? Theme.accent : Theme.muted;
                                     font-size: Theme.fs-caption;
-                                    font-weight: 600;
+                                    font-weight: Theme.fw-title;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
                                 }
