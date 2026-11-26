@@ -316,66 +316,50 @@ never reaches them; a dispatch from a branch builds unsigned. Each job checks
 its own secrets in its first step and stops there, before building anything,
 when one is missing or comes without its pair.
 
-Every secret has an item in the Private vault of 1Password, titled
-`<app> - <group> - <SECRET>` and tagged `ci-secret` and `copanda`. The app is
-`CoPanda`, or `Compartido` for what other apps sign with too: the Apple
-certificate and account, and the Windows PFX. The group is the environment, or
-`spare` and `bridge` for what is kept there but is no GitHub secret. A text value is a Password
-item, read with `op read -n "op://Private/<title>/password"`; a file is a
-Document item, read with `op document get "<title>"`. The commands below load
-each secret from the repository's folder, in bash (Git Bash, WSL or macOS),
-never in PowerShell, whose pipe alters the bytes of a file; a secret that
-already exists is replaced.
+Every secret has an item in the **Apps** vault of 1Password, titled with the
+secret's exact name in GitHub and tagged **CoPanda**. Other apps keep items of
+the same name in that vault, so the tag is what tells them apart, and a title
+alone never finds the right one. A spare that never goes to GitHub carries the
+suffix `_SPARE`.
+
+Each secret is loaded with `gh secret set <NAME> --repo rgdevment/CopyPaste
+--env <environment>`, which asks for the value to paste, or with
+`< <file>` at the end for a file. A secret that already exists is replaced.
 
 ### `signing` — `bundle-windows` and `bundle-macos`
 
-| Secret                       | 1Password item                                         | How to regenerate it                                                                                |
-| ---------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `PFX_BASE64`                 | `Compartido - signing - PFX_BASE64` (the `.pfx` file)  | Export the code-signing certificate with its private key as `.pfx`.                                 |
-| `PFX_PASSWORD`               | `Compartido - signing - PFX_PASSWORD`                  | The password chosen on that export.                                                                 |
-| `MACOS_CERTIFICATE_P12`      | `Compartido - signing - MACOS_CERTIFICATE_P12` (file)  | Export the Developer ID Application certificate and its key from Keychain as `.p12`.                |
-| `MACOS_CERTIFICATE_PASSWORD` | `Compartido - signing - MACOS_CERTIFICATE_PASSWORD`    | The password chosen on that export.                                                                 |
-| `APPLE_ID`                   | `Compartido - signing - APPLE_ID`                      | The Apple account that notarises.                                                                   |
-| `APPLE_APP_PASSWORD`         | `Compartido - signing - APPLE_APP_PASSWORD`            | A new app-specific password at account.apple.com → Sign-In and Security.                            |
-| `APPLE_TEAM_ID`              | `Compartido - signing - APPLE_TEAM_ID`                 | The team ID at developer.apple.com → Membership.                                                    |
+| Secret                       | 1Password item (Apps, tag CoPanda) | How to regenerate it                                                                                                      |
+| ---------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `PFX_BASE64`                 | `PFX_BASE64`                       | Export the code-signing certificate with its private key as `.pfx`, then `base64 < cert.pfx \| tr -d '\n' > cert.b64`; load `< cert.b64`. |
+| `PFX_PASSWORD`               | `PFX_PASSWORD`                     | The password chosen on that export.                                                                                       |
+| `MACOS_CERTIFICATE_P12`      | `MACOS_CERTIFICATE_P12`            | Export the Developer ID Application certificate and its key from Keychain as `.p12`, then base64 it the same way.        |
+| `MACOS_CERTIFICATE_PASSWORD` | `MACOS_CERTIFICATE_PASSWORD`       | The password chosen on that export.                                                                                       |
+| `APPLE_ID`                   | `APPLE_ID`                         | The Apple account that notarises.                                                                                         |
+| `APPLE_APP_PASSWORD`         | `APPLE_APP_PASSWORD`               | A new app-specific password at account.apple.com → Sign-In and Security.                                                  |
+| `APPLE_TEAM_ID`              | `APPLE_TEAM_ID`                    | The team ID at developer.apple.com → Membership.                                                                          |
 
-```sh
-op document get "Compartido - signing - PFX_BASE64" | base64 | tr -d '\n' | gh secret set PFX_BASE64 --env signing
-op read -n "op://Private/Compartido - signing - PFX_PASSWORD/password" | gh secret set PFX_PASSWORD --env signing
-op document get "Compartido - signing - MACOS_CERTIFICATE_P12" | base64 | tr -d '\n' | gh secret set MACOS_CERTIFICATE_P12 --env signing
-op read -n "op://Private/Compartido - signing - MACOS_CERTIFICATE_PASSWORD/password" | gh secret set MACOS_CERTIFICATE_PASSWORD --env signing
-op read -n "op://Private/Compartido - signing - APPLE_ID/password" | gh secret set APPLE_ID --env signing
-op read -n "op://Private/Compartido - signing - APPLE_APP_PASSWORD/password" | gh secret set APPLE_APP_PASSWORD --env signing
-op read -n "op://Private/Compartido - signing - APPLE_TEAM_ID/password" | gh secret set APPLE_TEAM_ID --env signing
-```
-
-Other apps sign with the `Compartido` items too, so a new certificate or
-password changes there for all of them.
+The certificates and the Apple account are the same other apps sign with, so a
+new certificate or password changes in their items too.
 
 `bundle-msix` reads no secret: it packs binaries `bundle-windows` already
 signed, and the Store signs the package.
 
 ### `updater` — `sign-updater` only, behind a required reviewer
 
-| Secret                               | 1Password item                                              | How to regenerate it                                                                   |
-| ------------------------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `TAURI_SIGNING_PRIVATE_KEY`          | `CoPanda - updater - TAURI_SIGNING_PRIVATE_KEY` (file)      | Not regenerated: when it is lost, the spare takes its place (see the updater keys above). |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | `CoPanda - updater - TAURI_SIGNING_PRIVATE_KEY_PASSWORD`    | The password the key was made with.                                                    |
+| Secret                               | 1Password item (Apps, tag CoPanda)   | How to regenerate it                                                                       |
+| ------------------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `TAURI_SIGNING_PRIVATE_KEY`          | `TAURI_SIGNING_PRIVATE_KEY`          | Not regenerated: when it is lost, the spare takes its place (see the updater keys above). |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | The password the key was made with.                                                        |
 
-```sh
-op document get "CoPanda - updater - TAURI_SIGNING_PRIVATE_KEY" | gh secret set TAURI_SIGNING_PRIVATE_KEY --env updater
-op read -n "op://Private/CoPanda - updater - TAURI_SIGNING_PRIVATE_KEY_PASSWORD/password" | gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD --env updater
-```
+The key is the file `tauri signer generate` writes, already text: it goes in
+with `< <key file>`, without `base64`.
 
-The key file `tauri signer generate` writes is already text, so it goes in as
-it is, without `base64`.
-
-The spare is `CoPanda - spare - TAURI_SIGNING_PRIVATE_KEY` and
-`CoPanda - spare - TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, and it is **never
-loaded into GitHub** while the primary works. On the day it replaces the
-primary, the two commands above run with `spare` in place of `updater` in the
-item titles, and a new spare is made with `npm run tauri signer generate` in
-`app` that same day.
+The spare is `TAURI_SIGNING_PRIVATE_KEY_SPARE` and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SPARE`, and it is **never loaded into
+GitHub** while the primary works. On the day it replaces the primary, its two
+values go into `TAURI_SIGNING_PRIVATE_KEY` and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` in `updater`, and a new spare is made with
+`npm run tauri signer generate` in `app` that same day.
 
 `sign-updater` builds nothing and runs nobody else's scripts; it is the only
 job that ever holds the key. It runs after the bundles, so a missing key
@@ -383,28 +367,17 @@ stops the release there, before anything is published.
 
 ### `channels` — `msstore`, `homebrew` and `winget`
 
-| Secret                | 1Password item                              | How to regenerate it                                                                                       |
-| --------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `STORE_TENANT_ID`     | `CoPanda - channels - STORE_TENANT_ID`      | Partner Center → Account settings → User management → Microsoft Entra applications.                       |
-| `STORE_SELLER_ID`     | `CoPanda - channels - STORE_SELLER_ID`      | Partner Center → Account settings → Legal info → Seller ID.                                               |
-| `STORE_CLIENT_ID`     | `CoPanda - channels - STORE_CLIENT_ID`      | The Entra application added there.                                                                        |
-| `STORE_CLIENT_SECRET` | `CoPanda - channels - STORE_CLIENT_SECRET`  | A new key on that application; it expires, so note the date.                                              |
-| `HOMEBREW_TAP_TOKEN`  | `CoPanda - channels - HOMEBREW_TAP_TOKEN`   | A fine-grained token limited to `rgdevment/homebrew-tap`, with Contents read and write.                   |
-| `WINGET_TOKEN`        | `CoPanda - channels - WINGET_TOKEN`         | A classic token of `rgdevment-bot` with `public_repo`, which Komac uses to push its fork and open the PR.  |
+| Secret                | 1Password item (Apps, tag CoPanda) | How to regenerate it                                                                                       |
+| --------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `STORE_TENANT_ID`     | `STORE_TENANT_ID`                  | Partner Center → Account settings → User management → Microsoft Entra applications.                       |
+| `STORE_SELLER_ID`     | `STORE_SELLER_ID`                  | Partner Center → Account settings → Legal info → Seller ID.                                               |
+| `STORE_CLIENT_ID`     | `STORE_CLIENT_ID`                  | The Entra application added there.                                                                        |
+| `STORE_CLIENT_SECRET` | `STORE_CLIENT_SECRET`              | A new key on that application; it expires, so note the date.                                              |
+| `HOMEBREW_TAP_TOKEN`  | `HOMEBREW_TAP_TOKEN`               | A fine-grained token limited to `rgdevment/homebrew-tap`, with Contents read and write.                   |
+| `WINGET_TOKEN`        | `WINGET_TOKEN`                     | A classic token of `rgdevment-bot` with `public_repo`, which Komac uses to push its fork and open the PR.  |
 
-```sh
-op read -n "op://Private/CoPanda - channels - STORE_TENANT_ID/password" | gh secret set STORE_TENANT_ID --env channels
-op read -n "op://Private/CoPanda - channels - STORE_SELLER_ID/password" | gh secret set STORE_SELLER_ID --env channels
-op read -n "op://Private/CoPanda - channels - STORE_CLIENT_ID/password" | gh secret set STORE_CLIENT_ID --env channels
-op read -n "op://Private/CoPanda - channels - STORE_CLIENT_SECRET/password" | gh secret set STORE_CLIENT_SECRET --env channels
-op read -n "op://Private/CoPanda - channels - HOMEBREW_TAP_TOKEN/password" | gh secret set HOMEBREW_TAP_TOKEN --env channels
-op read -n "op://Private/CoPanda - channels - WINGET_TOKEN/password" | gh secret set WINGET_TOKEN --env channels
-```
-
-The frozen bridge has no secret, and its two files are kept in 1Password too,
-as `CoPanda - bridge - release-manifest.json` and
-`CoPanda - bridge - release-manifest.json.sig`: the same bytes as
-`.github/bridge/`.
+The frozen bridge has no secret. Its two files are kept in the same vault with
+the same tag, the same bytes as `.github/bridge/`.
 
 ### Add before you remove
 
