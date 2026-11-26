@@ -281,5 +281,44 @@
         "said": "on Windows, if you copy a picture and switch to a terminal, Ctrl+V pastes the path to its file, ready to use; back in any other app, the picture pastes as always."
       }
     ]
+  },
+  {
+    "version": "3.5.0",
+    "es": [
+      {
+        "title": "Pega con un solo clic",
+        "said": "en Ajustes › General, Pegar con ahora ofrece Un clic: la tarjeta se pega al pulsarla y Mayús + clic la pega en texto plano. El doble clic sigue siendo lo habitual."
+      },
+      {
+        "title": "La letra que prefieras",
+        "said": "en Ajustes › Apariencia eliges cualquier fuente instalada, o Sistema para seguir la de tu equipo, y estos ajustes también la usan."
+      },
+      {
+        "title": "Un panel a tu medida",
+        "said": "en Apariencia, el panel puede ser Normal, Grande o Alto, de todo el alto de la pantalla; la densidad Lista muestra una fila por copia y Contraste alto marca más el texto y los bordes."
+      },
+      {
+        "title": "Recortes que se guardan",
+        "said": "en Windows, la Herramienta Recortes vuelve a guardar su archivo aunque CoPanda esté abierto."
+      }
+    ],
+    "en": [
+      {
+        "title": "Paste with a single click",
+        "said": "in Settings › General, Paste with now offers Single click: a card pastes when you click it, and Shift + click pastes it as plain text. Double click stays the default."
+      },
+      {
+        "title": "The type you like",
+        "said": "in Settings › Appearance, pick any installed font, or System to follow your computer's, and these settings wear it too."
+      },
+      {
+        "title": "A panel your size",
+        "said": "in Appearance, the panel can be Normal, Large or Tall, the full height of the screen; the List density shows one row per copy, and High contrast makes text and edges stand out."
+      },
+      {
+        "title": "Snips that save",
+        "said": "on Windows, the Snipping Tool saves its file again while CoPanda is open."
+      }
+    ]
   }
 ]
