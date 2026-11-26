@@ -54,3 +54,17 @@ fn the_panel_is_a_panel_of_the_system() {
 fn nothing_was_swapped_on_a_thread_that_never_floated_a_window() {
     assert_eq!(WAS.with(Cell::get), None);
 }
+
+#[test]
+fn off_the_main_thread_a_keyless_window_is_refused() {
+    if MainThreadMarker::new().is_some() {
+        return;
+    }
+    assert!(!keyless(NonNull::dangling(), true));
+    assert!(!keyless(NonNull::dangling(), false));
+}
+
+#[test]
+fn a_thread_that_never_lingered_keeps_no_keyless_window() {
+    assert_eq!(KEYLESS.with(Cell::get), 0);
+}

@@ -13,6 +13,8 @@ export type TextSize = "small" | "normal" | "large" | "larger";
 
 export type Density = "compact" | "normal" | "comfortable";
 
+export type PasteWith = "double-click" | "single-click";
+
 export type Kept = {
   locale: string | null;
   theme: Look;
@@ -20,6 +22,7 @@ export type Kept = {
   "plain-shortcut"?: string;
   "forms-shortcut"?: string;
   "hides-when-left": boolean;
+  "paste-with"?: PasteWith;
   "keeps-days": number;
   "images-quota-mb": number;
   "text-size"?: TextSize;

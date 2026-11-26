@@ -7,8 +7,9 @@ use windows::Win32::System::Threading::{
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetFocus, SetFocus};
 use windows::Win32::UI::WindowsAndMessaging::{
-    AllowSetForegroundWindow, GUITHREADINFO, GetForegroundWindow, GetGUIThreadInfo, IsWindow,
-    SMTO_ABORTIFHUNG, SMTO_BLOCK, SendMessageTimeoutW, SetForegroundWindow, WM_NULL,
+    AllowSetForegroundWindow, GUITHREADINFO, GWL_EXSTYLE, GetForegroundWindow, GetGUIThreadInfo,
+    GetWindowLongPtrW, IsWindow, SMTO_ABORTIFHUNG, SMTO_BLOCK, SendMessageTimeoutW,
+    SetForegroundWindow, SetWindowLongPtrW, WM_NULL, WS_EX_NOACTIVATE,
 };
 
 use crate::source::process_of;
@@ -97,6 +98,20 @@ pub fn is_alive(window: HWND) -> bool {
 
 pub fn bring_forward(window: HWND) -> bool {
     unsafe { SetForegroundWindow(window) }.as_bool()
+}
+
+pub fn clicks_activate(window: isize, activate: bool) {
+    let window = HWND(window as *mut _);
+    let style = unsafe { GetWindowLongPtrW(window, GWL_EXSTYLE) };
+    let wanted = without_activating(style, !activate);
+    if wanted != style {
+        unsafe { SetWindowLongPtrW(window, GWL_EXSTYLE, wanted) };
+    }
+}
+
+fn without_activating(style: isize, on: bool) -> isize {
+    let flag = WS_EX_NOACTIVATE.0 as isize;
+    if on { style | flag } else { style & !flag }
 }
 
 pub fn pull_forward(window: HWND) -> bool {

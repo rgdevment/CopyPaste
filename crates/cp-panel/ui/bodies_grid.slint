@@ -6,12 +6,15 @@ import { Words } from "words.slint";
 export component GridCell inherits Rectangle {
     in property <Card> card;
     in property <bool> current;
+    in property <bool> one-click;
     callback chosen();
     callback paste();
+    callback paste-clicked(bool);
     callback open-asked();
     callback stirred();
     callback dragged();
     property <bool> dragging;
+    property <bool> shifted;
     border-radius: Theme.radius-card;
     background: current ? Theme.selected : touch.has-hover ? Theme.row-hover : Theme.card;
     animate background { duration: current || touch.has-hover ? 0ms : Theme.let-go; }
@@ -22,11 +25,25 @@ export component GridCell inherits Rectangle {
     accessible-label: card.title + ", " + card.body;
 
     touch := TouchArea {
-        clicked => { if (!root.dragging) { root.chosen(); } }
-        double-clicked => { root.paste(); }
+        clicked => {
+            if (root.dragging) {
+                return;
+            }
+            if (root.one-click) {
+                root.paste-clicked(root.shifted);
+            } else {
+                root.chosen();
+            }
+        }
+        double-clicked => {
+            if (!root.one-click) {
+                root.paste();
+            }
+        }
         pointer-event(event) => {
             if (event.kind == PointerEventKind.down) {
                 root.dragging = false;
+                root.shifted = event.modifiers.shift;
             }
             if (event.kind == PointerEventKind.move) {
                 root.stirred();

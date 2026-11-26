@@ -61,6 +61,15 @@ impl Engine {
         self.watching.writing()
     }
 
+    pub fn caught_up(&self) {
+        if !self
+            .watching
+            .caught_up_within(cp_core::watching::CAUGHT_UP_WITHIN)
+        {
+            note("the newest copy was still being kept, so the one before it may be taken");
+        }
+    }
+
     pub fn ours(&self) -> bool {
         self.watching.ours()
     }

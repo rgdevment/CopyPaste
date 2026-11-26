@@ -15,6 +15,7 @@ pub mod paste_as;
 pub mod reading;
 pub mod resting;
 pub mod search;
+pub mod settling;
 pub mod stamp;
 pub mod thumbnail;
 pub mod token;

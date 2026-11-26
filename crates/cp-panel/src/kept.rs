@@ -5,6 +5,7 @@ pub struct Kept {
     pub english: bool,
     pub theme: cp_config::Theme,
     pub hides: bool,
+    pub one_click: bool,
     pub look: Look,
 }
 
@@ -95,6 +96,7 @@ pub fn resolve(config: Option<&cp_config::Config>, fonts: &cp_config::look::Choi
         english: crate::say::english_for(config.and_then(|kept| kept.locale.as_deref())),
         theme: config.map_or(cp_config::Theme::System, |kept| kept.theme),
         hides: config.is_none_or(|kept| kept.hides_when_left),
+        one_click: config.is_some_and(|kept| kept.paste_with == cp_config::PasteWith::SingleClick),
         look: look_of(config.unwrap_or(&cp_config::Config::default()), fonts),
     }
 }

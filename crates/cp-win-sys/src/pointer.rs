@@ -4,6 +4,7 @@ use windows::Win32::Graphics::Gdi::{
     MonitorFromWindow,
 };
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
+use windows::Win32::UI::Input::KeyboardAndMouse::GetDoubleClickTime;
 use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
 
 const PLAIN_DPI: f64 = 96.0;
@@ -17,6 +18,10 @@ pub struct Spot {
     pub right: i32,
     pub bottom: i32,
     pub scale: f64,
+}
+
+pub fn double_click_ms() -> u32 {
+    unsafe { GetDoubleClickTime() }
 }
 
 pub fn spot() -> Option<Spot> {
