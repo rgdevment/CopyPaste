@@ -29,6 +29,12 @@ fn fit(panel: &Panel, screen: Option<crate::here::Pointer>) {
     theme.set_height(height);
 }
 
+pub fn ready(panel: &Panel) {
+    crate::view::dress_words(panel);
+    panel.invoke_fresh_start();
+    resize(panel, crate::here::pointer().or_else(|| own_screen(panel)));
+}
+
 pub fn place(panel: &Panel) {
     fit(panel, crate::here::pointer());
     let theme = panel.global::<crate::Theme>();
@@ -95,10 +101,17 @@ pub fn rescaled(window: &slint::Window, zoom: f32) -> Option<f32> {
     Some(wanted)
 }
 
+fn own_screen(panel: &Panel) -> Option<crate::here::Pointer> {
+    crate::app::handle_of(panel.window()).and_then(crate::here::screen_of)
+}
+
 pub fn zoom(panel: &Panel) {
+    resize(panel, own_screen(panel).or_else(crate::here::pointer));
+}
+
+fn resize(panel: &Panel, screen: Option<crate::here::Pointer>) {
     use i_slint_backend_winit::WinitWindowAccessor;
-    let own = crate::app::handle_of(panel.window()).and_then(crate::here::screen_of);
-    fit(panel, own.or_else(crate::here::pointer));
+    fit(panel, screen);
     let window = panel.window();
     let theme = panel.global::<crate::Theme>();
     let wanted = rescaled(window, theme.get_zoom()).unwrap_or_else(|| window.scale_factor());

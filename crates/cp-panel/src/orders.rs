@@ -3,7 +3,7 @@ use crate::app::{dress, forward, handle_of};
 use crate::aside::aimed_at;
 use crate::here;
 use crate::note::note;
-use crate::showing::{SLOW, appear, place, vanish, zoom};
+use crate::showing::{SLOW, appear, place, ready, vanish, zoom};
 use slint::ComponentHandle;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicIsize, Ordering};
@@ -40,9 +40,8 @@ pub fn listen(
                         let before = aim.load(Ordering::Relaxed);
                         let showing = panel.window().is_visible() || here::activated();
                         aim.store(aimed_at(in_front, before, showing), Ordering::Relaxed);
+                        ready(&panel);
                         place(&panel);
-                        crate::view::dress_words(&panel);
-                        panel.invoke_fresh_start();
                         if panel.show().is_err() {
                             return;
                         }
@@ -111,8 +110,7 @@ pub fn watch_signals(ui: slint::Weak<Panel>, dir: std::path::PathBuf, shelf: cra
                     }
                     let _ = ui.upgrade_in_event_loop(move |ui| {
                         if show {
-                            crate::view::dress_words(&ui);
-                            ui.invoke_fresh_start();
+                            ready(&ui);
                             let _ = ui.show();
                             zoom(&ui);
                             appear(&ui);
