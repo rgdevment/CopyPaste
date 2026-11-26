@@ -25,3 +25,9 @@ fn a_window_that_is_not_there_still_falls_on_some_screen() {
     let nearest = spot_of(0);
     assert_eq!(nearest.is_some(), spot().is_some());
 }
+
+#[test]
+fn the_double_click_time_is_within_what_windows_allows() {
+    let ms = double_click_ms();
+    assert!(ms > 0 && ms <= 5000, "{ms}");
+}

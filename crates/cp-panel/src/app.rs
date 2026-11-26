@@ -6,7 +6,7 @@ use crate::model::{Metrics, Rows, reveal};
 use crate::note::note;
 use crate::opening::Reached;
 use crate::reaching::reach_for;
-use crate::showing::{NEXT_FRAME, appear, leave_when_left, vanish};
+use crate::showing::{NEXT_FRAME, appear, leave_when_left, linger, stop_lingering, vanish};
 use crate::view::{chips_of, compact, count_text, empty_of, harvest, label_of, sweeten};
 use crate::{Chip, FormRow, Options, Panel};
 use cp_core::kind::Kind;
@@ -47,6 +47,7 @@ struct State {
     asking: Asking,
     typing: slint::Timer,
     leaving: slint::Timer,
+    lingering: slint::Timer,
     pointing: slint::Timer,
     arming: slint::Timer,
     last_refresh: Duration,
@@ -110,6 +111,7 @@ impl App {
             asking: Asking::Kinds,
             typing: slint::Timer::default(),
             leaving: slint::Timer::default(),
+            lingering: slint::Timer::default(),
             pointing: slint::Timer::default(),
             arming: slint::Timer::default(),
             last_refresh: Duration::ZERO,
@@ -124,6 +126,7 @@ impl App {
         app.wire(&panel);
         app.wire_quick(&panel);
         dress_theme(panel.global::<crate::Theme>(), kept);
+        panel.set_one_click(kept.one_click);
         refresh(&panel, &app.state);
         Ok((panel, app))
     }
@@ -257,7 +260,7 @@ impl App {
                 Asking::Forms(id) => {
                     let (store, engine, towards) = aimed(&state);
                     match paste_as(&store, engine.as_deref(), id, key.as_str(), towards) {
-                        Ok(()) => deliver(&ui, &state),
+                        Ok(()) => deliver(&ui, &state, Going::AtOnce),
                         Err(refused) => complain(&ui, refused.said()),
                     }
                 }
@@ -490,13 +493,18 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_paste(move |id| {
-            let (store, engine, towards) = aimed(&state);
-            let handed = hand_over(&store, engine.as_deref(), i64::from(id), towards);
             if let Some(ui) = ui.upgrade() {
-                if handed {
-                    deliver(&ui, &state);
+                paste_card(&ui, &state, id, Going::AtOnce);
+            }
+        });
+        let ui = self.ui.clone();
+        let state = self.state.clone();
+        panel.on_paste_clicked(move |id, plain| {
+            if let Some(ui) = ui.upgrade() {
+                if plain {
+                    paste_card_as(&ui, &state, id, "plain", Going::Lingering);
                 } else {
-                    complain(&ui, busy());
+                    paste_card(&ui, &state, id, Going::Lingering);
                 }
             }
         });
@@ -639,9 +647,11 @@ impl App {
                 ui.set_query(Default::default());
                 ui.set_sheet_open(false);
                 ui.set_chips_scroll(0.0);
+                stop_lingering(&ui, &state.borrow().lingering);
                 let kept = state.borrow().kept.get();
                 state.borrow_mut().metrics.shut_lines = kept.look.density.shut_lines();
                 dress_theme(ui.global::<crate::Theme>(), kept);
+                ui.set_one_click(kept.one_click);
                 ui.set_update_line(newer_line().into());
                 refresh(&ui, &state);
                 back_to_the_newest(&ui, &state);
@@ -677,20 +687,8 @@ impl App {
         let ui = self.ui.clone();
         let state = self.state.clone();
         panel.on_paste_as(move |id, key| {
-            let (store, engine, towards) = aimed(&state);
-            let done = paste_as(
-                &store,
-                engine.as_deref(),
-                i64::from(id),
-                key.as_str(),
-                towards,
-            );
             if let Some(ui) = ui.upgrade() {
-                ui.set_sheet_open(false);
-                match done {
-                    Ok(()) => deliver(&ui, &state),
-                    Err(refused) => complain(&ui, refused.said()),
-                }
+                paste_card_as(&ui, &state, id, key.as_str(), Going::AtOnce);
             }
         });
         let (ui, state) = (self.ui.clone(), self.state.clone());
@@ -1196,13 +1194,44 @@ pub fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
-fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Going {
+    AtOnce,
+    Lingering,
+}
+
+fn paste_card(ui: &Panel, state: &Rc<RefCell<State>>, id: i32, going: Going) {
+    let (store, engine, towards) = aimed(state);
+    if hand_over(&store, engine.as_deref(), i64::from(id), towards) {
+        deliver(ui, state, going);
+    } else {
+        complain(ui, busy());
+    }
+}
+
+fn paste_card_as(ui: &Panel, state: &Rc<RefCell<State>>, id: i32, key: &str, going: Going) {
+    let (store, engine, towards) = aimed(state);
+    let done = paste_as(&store, engine.as_deref(), i64::from(id), key, towards);
+    ui.set_sheet_open(false);
+    match done {
+        Ok(()) => deliver(ui, state, going),
+        Err(refused) => complain(ui, refused.said()),
+    }
+}
+
+fn deliver(ui: &Panel, state: &Rc<RefCell<State>>, going: Going) {
     let ahead = state.borrow().ahead.swap(0, Ordering::Relaxed);
-    let (weak, later, state) = (ui.as_weak(), ui.as_weak(), state.clone());
+    let (weak, later, state, mine) = (ui.as_weak(), ui.as_weak(), state.clone(), state.clone());
     let hide = move || {
         if let Some(ui) = weak.upgrade() {
             ui.set_sheet_open(false);
-            let _ = ui.hide();
+            if going == Going::Lingering {
+                let held = mine.borrow();
+                held.leaving.stop();
+                linger(&ui, &held.lingering);
+            } else {
+                let _ = ui.hide();
+            }
         }
     };
     let paste = move || {
@@ -1227,6 +1256,7 @@ fn deliver(ui: &Panel, state: &Rc<RefCell<State>>) {
                     note(&format!(
                         "it stays on the clipboard, unpasted: {why:?}: {said}"
                     ));
+                    stop_lingering(&ui, &state.borrow().lingering);
                     if ui.show().is_ok() {
                         forward(&ui);
                         appear(&ui);

@@ -39,6 +39,7 @@ struct Bench {
     cards: Rc<VecModel<Card>>,
     pasted: Rc<RefCell<Vec<i32>>>,
     moved: Rc<RefCell<Vec<i32>>>,
+    tapped: Rc<RefCell<Vec<(i32, bool)>>>,
 }
 
 fn tick(ms: u64) {
@@ -93,12 +94,16 @@ fn bench(count: i32) -> Bench {
             panel.get_viewport_height(),
         ));
     });
+    let tapped = Rc::new(RefCell::new(Vec::new()));
+    let counted = tapped.clone();
+    panel.on_paste_clicked(move |id, plain| counted.borrow_mut().push((id, plain)));
     tick(600);
     Bench {
         panel,
         cards,
         pasted,
         moved,
+        tapped,
     }
 }
 
@@ -207,5 +212,166 @@ fn enter_with_the_pointer_away_pastes_the_card_chosen_by_keys() {
     bench.panel.set_current(2);
     bench.panel.set_hovered(-1);
     press(&bench.panel, slint::platform::Key::Return);
+    assert_eq!(*bench.pasted.borrow(), [2]);
+}
+
+fn one_click_bench(count: i32) -> Bench {
+    let bench = bench(count);
+    bench.panel.set_one_click(true);
+    tick(100);
+    bench
+}
+
+fn shifted_click(panel: &Panel, at: LogicalPosition) {
+    let window = panel.window();
+    let shift: slint::SharedString = slint::platform::Key::Shift.into();
+    window.dispatch_event(WindowEvent::KeyPressed {
+        text: shift.clone(),
+    });
+    click(panel, at, 60);
+    window.dispatch_event(WindowEvent::KeyReleased { text: shift });
+}
+
+fn grid_bench(count: i32) -> (Bench, f32) {
+    let bench = one_click_bench(count);
+    let top = bench.panel.get_list_top();
+    bench.panel.set_layout("image".into());
+    bench.panel.set_way("grid".into());
+    let lines = (0..(count + 1) / 2).collect::<Vec<i32>>();
+    bench.panel.set_grid_lines(VecModel::from_slice(&lines));
+    tick(100);
+    (bench, top)
+}
+
+fn grid_cell(bench: &Bench, top: f32, line: usize, left: bool) -> LogicalPosition {
+    let cell = bench.panel.global::<crate::Theme>().get_cell();
+    let y = top + line as f32 * cell + cell / 2.0 - 4.0;
+    LogicalPosition::new(if left { 120.0 } else { 360.0 }, y)
+}
+
+#[test]
+fn with_one_click_on_a_single_click_pastes_the_card_and_opens_nothing() {
+    let bench = one_click_bench(8);
+    click(&bench.panel, centre_of(&bench, 3), 60);
+    tick(600);
+    assert_eq!(*bench.tapped.borrow(), [(3, false)]);
+    assert!(bench.pasted.borrow().is_empty());
+    assert!(bench.moved.borrow().is_empty());
+    assert_eq!(open_one(&bench.panel), None);
+}
+
+#[test]
+fn with_one_click_on_shift_and_click_asks_for_plain() {
+    let bench = one_click_bench(8);
+    shifted_click(&bench.panel, centre_of(&bench, 2));
+    tick(600);
+    assert_eq!(*bench.tapped.borrow(), [(2, true)]);
+    assert!(bench.pasted.borrow().is_empty());
+}
+
+#[test]
+fn with_one_click_on_a_click_after_a_shift_click_is_not_plain() {
+    let bench = one_click_bench(8);
+    shifted_click(&bench.panel, centre_of(&bench, 2));
+    tick(600);
+    click(&bench.panel, centre_of(&bench, 4), 60);
+    assert_eq!(*bench.tapped.borrow(), [(2, true), (4, false)]);
+}
+
+#[test]
+fn with_one_click_on_dragging_a_card_past_the_start_does_not_paste_it() {
+    let bench = one_click_bench(8);
+    let window = bench.panel.window();
+    let from = centre_of(&bench, 3);
+    let to = LogicalPosition::new(from.x + 30.0, from.y);
+    window.dispatch_event(WindowEvent::PointerMoved { position: from });
+    window.dispatch_event(WindowEvent::PointerPressed {
+        position: from,
+        button: PointerEventButton::Left,
+    });
+    tick(60);
+    window.dispatch_event(WindowEvent::PointerMoved { position: to });
+    tick(60);
+    window.dispatch_event(WindowEvent::PointerReleased {
+        position: to,
+        button: PointerEventButton::Left,
+    });
+    tick(600);
+    assert!(bench.tapped.borrow().is_empty());
+    assert!(bench.pasted.borrow().is_empty());
+}
+
+#[test]
+fn with_one_click_on_a_click_while_the_sheet_is_open_only_closes_it() {
+    let bench = one_click_bench(8);
+    bench.panel.set_sheet_open(true);
+    click(&bench.panel, centre_of(&bench, 3), 60);
+    tick(600);
+    assert!(!bench.panel.get_sheet_open());
+    assert!(bench.tapped.borrow().is_empty());
+    assert!(bench.pasted.borrow().is_empty());
+}
+
+#[test]
+fn while_the_panel_lingers_a_click_fires_nothing() {
+    let bench = one_click_bench(8);
+    bench.panel.set_lingering(true);
+    tick(100);
+    click(&bench.panel, centre_of(&bench, 3), 60);
+    tick(600);
+    assert!(bench.tapped.borrow().is_empty());
+    assert!(bench.pasted.borrow().is_empty());
+    assert!(bench.moved.borrow().is_empty());
+}
+
+#[test]
+fn with_one_click_on_a_click_on_the_image_grid_pastes_the_cell() {
+    let (bench, top) = grid_bench(6);
+    click(&bench.panel, grid_cell(&bench, top, 1, true), 60);
+    tick(600);
+    assert_eq!(*bench.tapped.borrow(), [(2, false)]);
+    click(&bench.panel, grid_cell(&bench, top, 2, false), 60);
+    tick(600);
+    assert_eq!(*bench.tapped.borrow(), [(2, false), (5, false)]);
+    assert!(bench.pasted.borrow().is_empty());
+}
+
+#[test]
+fn with_one_click_on_a_double_click_on_the_image_grid_clicks_twice_and_never_pastes_the_old_way() {
+    let (bench, top) = grid_bench(6);
+    let at = grid_cell(&bench, top, 1, false);
+    click(&bench.panel, at, 60);
+    tick(100);
+    click(&bench.panel, at, 60);
+    tick(600);
+    assert_eq!(bench.tapped.borrow().len(), 2);
+    assert!(bench.pasted.borrow().is_empty());
+}
+
+#[test]
+fn with_one_click_off_a_single_click_only_opens_the_card() {
+    let bench = bench(8);
+    click(&bench.panel, centre_of(&bench, 3), 60);
+    tick(600);
+    assert!(bench.tapped.borrow().is_empty());
+    assert!(bench.pasted.borrow().is_empty());
+    assert_eq!(open_one(&bench.panel), Some(3));
+}
+
+#[test]
+fn with_one_click_off_a_double_click_on_the_image_grid_still_pastes() {
+    let bench = bench(6);
+    let top = bench.panel.get_list_top();
+    bench.panel.set_layout("image".into());
+    bench.panel.set_way("grid".into());
+    let lines = [0, 1, 2];
+    bench.panel.set_grid_lines(VecModel::from_slice(&lines));
+    tick(100);
+    let at = grid_cell(&bench, top, 1, true);
+    click(&bench.panel, at, 60);
+    tick(100);
+    click(&bench.panel, at, 60);
+    tick(600);
+    assert!(bench.tapped.borrow().is_empty());
     assert_eq!(*bench.pasted.borrow(), [2]);
 }

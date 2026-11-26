@@ -59,6 +59,24 @@ fn the_panel_and_its_windows(b: &mut Battery) {
     });
 
     b.case(
+        "S9",
+        "a panel lingering after a click paste lets go of the keys and takes them again after",
+        || {
+            let floated = floated.ok_or("this needs the main thread and a window of its own")?;
+            if !floated.lingers_without_the_keys {
+                return Err(
+                    "a lingering panel could still take the keys, so the paste would land in it"
+                        .into(),
+                );
+            }
+            if !floated.keys_come_back {
+                return Err("the panel stays without the keys once it is done lingering".into());
+            }
+            Ok(())
+        },
+    );
+
+    b.case(
         "S5",
         "the settings window keeps close and minimise and loses zoom",
         || {

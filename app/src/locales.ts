@@ -115,6 +115,11 @@ const ES = {
   keysTableWhy: "Estas teclas funcionan mientras el panel está abierto",
   hides: "Ocultar al hacer clic fuera",
   hidesWhy: "El panel se va solo en cuanto haces clic en otra ventana",
+  pasteWith: "Pegar con",
+  pasteWithWhy:
+    "Con un clic, la tarjeta se pega al pulsarla y Mayús + clic la pega en texto plano; la flecha derecha la abre",
+  pasteWithDouble: "Doble clic",
+  pasteWithSingle: "Un clic",
 
   bandKeeps: "Qué se guarda",
   keeps: "Conservar",
@@ -478,6 +483,11 @@ const EN: Record<keyof Said, string> = {
   keysTableWhy: "These keys work while the panel is open",
   hides: "Hide when you click elsewhere",
   hidesWhy: "The panel goes away on its own as soon as you click another window",
+  pasteWith: "Paste with",
+  pasteWithWhy:
+    "With a single click, a card pastes when you click it and Shift + click pastes it as plain text; the right arrow opens it",
+  pasteWithDouble: "Double click",
+  pasteWithSingle: "Single click",
 
   bandKeeps: "What is kept",
   keeps: "Keep",
@@ -855,6 +865,23 @@ const PANEL_ROWS = [
   { id: "dismiss", keys: "Esc", es: "cerrar el panel", en: "close the panel" },
 ] as const satisfies readonly Row[];
 
+const ONE_CLICK_ROWS: Record<string, Row> = {
+  "open-card": {
+    id: "open-card",
+    keys: "Clic",
+    keysEn: "Click",
+    es: "pegar esa tarjeta",
+    en: "paste that card",
+  },
+  "paste-card": {
+    id: "paste-card",
+    keys: "Mayús + clic",
+    keysEn: "Shift + click",
+    es: "pegarla en texto plano",
+    en: "paste it as plain text",
+  },
+};
+
 type Which = (typeof PANEL_ROWS)[number]["id"];
 
 let now: Record<keyof Said, string> = ES;
@@ -948,8 +975,9 @@ function spelling(row: Row, mac: boolean): string {
   return now === EN && row.keysEn ? row.keysEn : row.keys;
 }
 
-export function panelKeys(mac: boolean): Binding[] {
-  return PANEL_ROWS.map((row) => {
+export function panelKeys(mac: boolean, oneClick = false): Binding[] {
+  return PANEL_ROWS.map((listed) => {
+    const row: Row = (oneClick && ONE_CLICK_ROWS[listed.id]) || listed;
     const keys = spelling(row, mac);
     return { id: row.id, keys, said: spoken(keys), does: now === EN ? row.en : row.es };
   });

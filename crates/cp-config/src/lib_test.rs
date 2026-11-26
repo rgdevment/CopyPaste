@@ -32,6 +32,7 @@ fn what_goes_in_comes_back() {
         plain_shortcut: "Ctrl+Alt+B".into(),
         forms_shortcut: String::new(),
         hides_when_left: false,
+        paste_with: PasteWith::SingleClick,
         keeps_days: None,
         images_quota_mb: Some(512),
         welcomed: Some("3.0.0".into()),
@@ -725,4 +726,59 @@ fn the_other_names_the_system_knows_a_key_by_are_the_same_key() {
     assert!(the_systems("CommandOrControl+V"));
     assert!(the_systems("Control+keyc"));
     assert!(!the_systems("Control+Alt+V"));
+}
+
+#[test]
+fn pasting_with_a_double_click_is_the_default() {
+    assert_eq!(PasteWith::default(), PasteWith::DoubleClick);
+    assert_eq!(Config::default().paste_with, PasteWith::DoubleClick);
+}
+
+#[test]
+fn a_file_from_before_pasting_with_a_click_reads_as_a_double_click() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(
+        &path,
+        "hides-when-left = false
+",
+    )
+    .expect("writes");
+    assert_eq!(
+        read(&path).expect("reads").paste_with,
+        PasteWith::DoubleClick
+    );
+}
+
+#[test]
+fn pasting_with_a_single_click_is_written_and_read_back() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    let mine = Config {
+        paste_with: PasteWith::SingleClick,
+        ..Config::default()
+    };
+    write(&path, &mine).expect("writes");
+    let text = std::fs::read_to_string(&path).expect("reads the file");
+    assert!(text.contains("paste-with = \"single-click\""), "{text}");
+    assert_eq!(
+        read(&path).expect("reads").paste_with,
+        PasteWith::SingleClick
+    );
+}
+
+#[test]
+fn a_way_of_pasting_this_version_does_not_know_falls_back_to_the_double_click() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(
+        &path,
+        "paste-with = \"triple\"
+hides-when-left = false
+",
+    )
+    .expect("writes");
+    let read = read(&path).expect("reads");
+    assert_eq!(read.paste_with, PasteWith::DoubleClick);
+    assert!(!read.hides_when_left);
 }
