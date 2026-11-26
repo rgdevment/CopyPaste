@@ -1536,8 +1536,6 @@ jobs:
           	  desc "Clipboard history that stays on your machine${SUFFIX}"
           	  homepage "https://www.copanda.app/"
 
-          	  auto_updates true
-
           	  conflicts_with cask: [CONFLICTS]
           	  depends_on macos: :ventura
 

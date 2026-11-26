@@ -70,8 +70,9 @@ copy that only knew that channel is not left behind.
 What it does with an offer depends on where the copy came from, which it reads
 off its own path: a copy under `WindowsApps` is the Store's to update and is
 never offered anything; anything else, a Homebrew copy included, installs its
-own update with one click, as Tisty does. The casks say `auto_updates true`, so
-Homebrew expects that, and a Homebrew copy updates itself with the button. A copy
+own update with one click, as Tisty does. A Homebrew copy updates itself with
+the button, and `brew upgrade` updates it too; after the button, Homebrew still
+counts it as outdated and may reinstall the same version, which does no harm. A copy
 that cannot replace itself, such as one running from the mounted `.dmg`, is told
 to move to Applications first.
 
@@ -151,6 +152,10 @@ first-submission hurdle does not apply. `vars.STORE_PUBLISH` goes on with the
 The tap repository already exists and the `homebrew` job rewrites the cask
 itself, so there is nothing to write by hand. Leave the frozen Linux formulae
 alone: the job must not sweep them.
+
+The casks do not say `auto_updates true`: with it, `brew upgrade` skips the
+app, and a Mac on 3.0–3.4 cannot verify the new updater key, so without it
+`brew upgrade` is how those Macs reach 3.5.1 with no manual download.
 
 The cask's `homepage` is `https://www.copanda.app/`, the product page —
 not the repository. The same holds anywhere a store or a package manager asks
