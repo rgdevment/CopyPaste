@@ -47,6 +47,7 @@ export type Choices = {
   texts: Offered[];
   code: Offered;
   codes: Offered[];
+  plainSystem: boolean;
   accents: Paint[];
 };
 
@@ -69,11 +70,44 @@ export const PLAIN_LOOK: Partial<Kept> = {
 export function useChoices() {
   const [choices, setChoices] = useState<Choices | null>(null);
   useEffect(() => {
-    invoke<Choices>("looks")
-      .then(setChoices)
-      .catch(() => setChoices(null));
+    const ask = () => {
+      invoke<Choices>("looks")
+        .then(setChoices)
+        .catch(() => setChoices(null));
+    };
+    const shown = () => {
+      if (document.visibilityState === "visible") ask();
+    };
+    ask();
+    document.addEventListener("visibilitychange", shown);
+    return () => document.removeEventListener("visibilitychange", shown);
   }, []);
   return choices;
+}
+
+export type Worn = { text: string | null; code: string | null };
+
+export function wornFonts(kept: Kept, choices: Choices): Worn {
+  const text = choices.texts.find((one) => one.id === kept.font);
+  const code = choices.codes.find((one) => one.id === kept["code-font"]);
+  return {
+    text: text?.css ?? (choices.plainSystem ? null : choices.text.css),
+    code: (code ?? choices.code).css,
+  };
+}
+
+export function wearFonts(worn: Worn) {
+  const style = document.documentElement.style;
+  for (const [name, css] of [
+    ["--worn-text", worn.text],
+    ["--worn-code", worn.code],
+  ] as const) {
+    if (css) {
+      style.setProperty(name, css);
+    } else {
+      style.removeProperty(name);
+    }
+  }
 }
 
 const REACHABLE = "button, select, input, textarea, a[href], [role='switch']";

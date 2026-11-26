@@ -58,6 +58,8 @@ windows = { version = "0.62", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_UI_Accessibility",
     "Win32_Graphics_Gdi",
+    "Win32_Graphics_DirectWrite",
+    "Win32_Globalization",
     "Win32_UI_HiDpi",
     "Win32_Graphics_Dwm",
     "Win32_UI_Input_KeyboardAndMouse",
@@ -92,6 +94,7 @@ objc2-foundation = "0.3"
 objc2-app-kit = "0.3"
 objc2-core-graphics = "0.3"
 objc2-core-foundation = "0.3"
+objc2-core-text = "0.3"
 objc2-application-services = "0.3"
 objc2-vision = "0.3"
 objc2-service-management = { version = "0.3", default-features = false, features = ["std", "objc2", "objc2-foundation", "SMAppService"] }

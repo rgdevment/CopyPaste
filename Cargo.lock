@@ -1171,6 +1171,8 @@ checksum = "7704b5fdd17b18ae31c4c1da5a2e0305a2bf17b5249300a9ee9ed7b72114c636"
 name = "cp-config"
 version = "3.0.0-dev"
 dependencies = [
+ "cp-mac-sys",
+ "cp-win-sys",
  "serde",
  "serde_json",
  "tempfile",
@@ -1238,6 +1240,7 @@ dependencies = [
  "objc2-av-foundation",
  "objc2-core-foundation",
  "objc2-core-graphics",
+ "objc2-core-text",
  "objc2-foundation 0.3.2",
  "objc2-service-management",
  "objc2-vision",
@@ -4625,6 +4628,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cde0dfb48d25d2b4862161a4d5fcc0e3c24367869ad306b0c9ec0073bfed92d"
 dependencies = [
  "bitflags 2.13.2",
+ "block2 0.6.2",
+ "libc",
  "objc2 0.6.5",
  "objc2-core-foundation",
  "objc2-core-graphics",

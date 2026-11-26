@@ -10,7 +10,7 @@ async function opened() {
   const who = userEvent.setup();
   render(<App />);
   await who.click(await screen.findByRole("button", { name: "Apariencia" }));
-  await screen.findByLabelText("Fuente");
+  await screen.findByRole("button", { name: /^Fuente:/ });
   return who;
 }
 
@@ -33,6 +33,7 @@ const CHOICES = {
   texts: [{ id: "avenir-next", label: "Avenir Next", css: '"Avenir Next"' }],
   code: { id: "", label: "Menlo", css: "Menlo" },
   codes: [{ id: "sf-mono", label: "SF Mono", css: "ui-monospace" }],
+  plainSystem: true,
   accents: [
     {
       id: "indigo",
@@ -62,8 +63,12 @@ describe("the appearance", () => {
     const size = screen.getByRole("radiogroup", { name: "Tamaño" });
     expect(within(size).getByRole("radio", { name: "Normal" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "Índigo · predeterminado" })).toBeChecked();
-    expect(screen.getByLabelText("Fuente")).toHaveDisplayValue("SF Pro · predeterminado");
-    expect(screen.getByLabelText("Fuente del código")).toHaveDisplayValue("Menlo · predeterminado");
+    expect(screen.getByRole("button", { name: /^Fuente:/ })).toHaveTextContent(
+      "Sistema (SF Pro) · predeterminado",
+    );
+    expect(screen.getByRole("button", { name: /^Fuente del código:/ })).toHaveTextContent(
+      "Menlo · predeterminado",
+    );
     const height = screen.getByRole("radiogroup", { name: "Altura de las tarjetas" });
     expect(within(height).getByRole("radio", { name: "Normal" })).toBeChecked();
   });
@@ -83,15 +88,18 @@ describe("the appearance", () => {
     expect(invoke).toHaveBeenCalledWith("keep", {
       config: expect.objectContaining({ accent: "teal" }),
     });
-    await who.selectOptions(screen.getByLabelText("Fuente"), "avenir-next");
+    await who.click(screen.getByRole("button", { name: /^Fuente:/ }));
+    await who.click(screen.getByRole("option", { name: "Avenir Next" }));
     expect(invoke).toHaveBeenCalledWith("keep", {
       config: expect.objectContaining({ font: "avenir-next" }),
     });
-    await who.selectOptions(screen.getByLabelText("Fuente del código"), "sf-mono");
+    await who.click(screen.getByRole("button", { name: /^Fuente del código:/ }));
+    await who.click(screen.getByRole("option", { name: "SF Mono" }));
     expect(invoke).toHaveBeenCalledWith("keep", {
       config: expect.objectContaining({ "code-font": "sf-mono" }),
     });
-    await who.selectOptions(screen.getByLabelText("Fuente"), "");
+    await who.click(screen.getByRole("button", { name: /^Fuente:/ }));
+    await who.click(screen.getByRole("option", { name: "Sistema (SF Pro) · predeterminado" }));
     expect(invoke).toHaveBeenCalledWith("keep", {
       config: expect.objectContaining({ font: null }),
     });
@@ -184,7 +192,7 @@ describe("each choice group", () => {
     const who = userEvent.setup();
     render(<App />);
     await who.click(await screen.findByRole("button", { name: "Apariencia" }));
-    await screen.findByLabelText("Fuente");
+    await screen.findByRole("button", { name: /^Fuente:/ });
     const size = screen.getByRole("radiogroup", { name: "Tamaño" });
     const stops = within(size)
       .getAllByRole("radio")
