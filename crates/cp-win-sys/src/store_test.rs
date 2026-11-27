@@ -1,31 +1,11 @@
 use super::*;
 
 #[test]
-fn only_what_closing_copanda_will_not_clear_counts_as_paused() {
-    use StoreQueueItemExtendedState as Reason;
-    for reason in [
-        Reason::Paused,
-        Reason::PausedLowBattery,
-        Reason::PausedWiFiRequired,
-    ] {
-        assert_eq!(queue_of(StoreQueueItemState::Paused, reason), Queue::Paused);
-    }
-    for reason in [Reason::PausedPackagesInUse, Reason::PausedReadyToInstall] {
-        assert_eq!(queue_of(StoreQueueItemState::Paused, reason), Queue::Moving);
-    }
-    assert_eq!(
-        queue_of(StoreQueueItemState::Active, Reason::ActiveDownloading),
-        Queue::Moving
-    );
+fn the_process_asks_to_come_back_after_it_is_replaced() {
+    assert!(reopen_when_replaced().is_ok());
 }
 
 #[test]
-fn a_package_version_reads_as_the_release_it_carries() {
-    assert_eq!(said((3, 5, 1)), "3.5.1");
-}
-
-#[test]
-fn a_copy_run_outside_any_package_is_not_one_the_store_sold() {
-    assert!(!sold_here());
-    assert_eq!(waiting_beside_us(), None);
+fn a_store_context_is_handed_out_with_its_owner_window_set() {
+    assert!(store_context(0).is_ok());
 }

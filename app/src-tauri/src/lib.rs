@@ -12,6 +12,8 @@ mod reviving;
 mod settings;
 mod shop;
 mod staged;
+#[cfg(windows)]
+mod store;
 mod tray;
 mod trust;
 mod update;

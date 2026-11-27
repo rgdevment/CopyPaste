@@ -273,7 +273,7 @@ pub async fn install(app: &tauri::AppHandle, owner: Option<isize>) -> Result<(),
 #[cfg(windows)]
 mod there {
     use super::{Shelf, Trouble};
-    use cp_win_sys::store::{self, Queue, Taken};
+    use crate::store::{self, Queue, Taken};
 
     const PATIENCE: std::time::Duration = std::time::Duration::from_secs(10);
     const AGAIN: std::time::Duration = std::time::Duration::from_secs(6);
