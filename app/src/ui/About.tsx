@@ -10,6 +10,7 @@ import {
   type Looked,
   licences,
   notices,
+  RELEASES,
   type Route,
   type Underway,
   useUpdate,
@@ -115,13 +116,29 @@ function Status({
   seen,
   busy,
   trouble,
+  stranded,
   step,
+  onWeb,
 }: Readonly<{
   seen: Looked | null;
   busy: boolean;
   trouble: string | null;
+  stranded: boolean;
   step: Underway | null;
+  onWeb: () => void;
 }>) {
+  if (trouble && stranded) {
+    return (
+      <>
+        <span>{trouble}</span>
+        <span className="asks">
+          <button type="button" className="welcome-link" onClick={onWeb}>
+            {t("updateFromWeb")}
+          </button>
+        </span>
+      </>
+    );
+  }
   if (trouble) return <span>{trouble}</span>;
   if (step) return <Progress step={step} store={seen?.route === "store"} />;
   return <span>{busy && seen?.ready?.installs ? t("updateStarting") : howItGoes(seen)}</span>;
@@ -168,13 +185,15 @@ function Newer({
   here,
   change,
   onShelf,
+  onWeb,
 }: Readonly<{
   kept: Kept | null;
   here: string | null;
   change: (what: Partial<Kept>) => Promise<void>;
   onShelf: () => void;
+  onWeb: () => void;
 }>) {
-  const { seen, busy, trouble, step, look, install } = useUpdate();
+  const { seen, busy, trouble, stranded, step, look, install } = useUpdate();
   const ready = seen?.ready ?? null;
   const looked = !trouble && (seen?.looked ?? false);
   const itself = kept?.["updates-itself"] === true;
@@ -186,7 +205,14 @@ function Newer({
         <span className={looked && !ready ? "pip ok" : "pip"} />
         <span className="grow" aria-live="polite">
           <b>{headline(seen, looked)}</b>
-          <Status seen={seen} busy={busy} trouble={trouble} step={step} />
+          <Status
+            seen={seen}
+            busy={busy}
+            trouble={trouble}
+            stranded={stranded}
+            step={step}
+            onWeb={onWeb}
+          />
           {asks && <AsksItself offered={ready.version} change={change} />}
         </span>
         <Action
@@ -255,7 +281,7 @@ function Notices({
   return <section ref={box} className="notices" aria-label={label} />;
 }
 
-export const LINKS = [STARS, SPONSOR, COFFEE, ALTERNATIVE, RATING, PRIVACY, SHELF];
+export const LINKS = [STARS, SPONSOR, COFFEE, ALTERNATIVE, RATING, PRIVACY, SHELF, RELEASES];
 
 export default function About({
   kept,
@@ -368,7 +394,13 @@ export default function About({
         </div>
       </div>
 
-      <Newer kept={kept} here={version} change={change} onShelf={() => go(SHELF)} />
+      <Newer
+        kept={kept}
+        here={version}
+        change={change}
+        onShelf={() => go(SHELF)}
+        onWeb={() => go(RELEASES)}
+      />
 
       <div className="rule">{t("supportTitle")}</div>
       <p className="quiet">{t("supportWhy")}</p>

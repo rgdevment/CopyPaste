@@ -3,13 +3,11 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { asKeys, caps, type Kept, onMac, type Trust, useKept, useKeys } from "../core";
+import { asKeys, caps, type Kept, onMac, RELEASES, type Trust, useKept, useKeys } from "../core";
 import { fill, inEnglish, items, oneKey, panelKey, t } from "../locales";
 import news from "../news.json";
 import panda from "../panda.svg";
 import Chrome from "./Chrome";
-
-const RELEASES = "https://github.com/rgdevment/CopyPaste/releases";
 
 export type Greeting =
   | { kind: "tour"; former: boolean }

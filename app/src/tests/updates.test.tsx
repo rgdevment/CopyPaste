@@ -411,4 +411,52 @@ describe("updates", () => {
       expect(screen.queryByText(/Ver la .* disponible/)).toBeNull();
     });
   });
+
+  describe("the way out when the update cannot be taken", () => {
+    const web = "Descargar desde la web";
+    const releases = "https://github.com/rgdevment/CopyPaste/releases";
+
+    async function failing(why: string, over: Partial<Looked> = {}) {
+      const who = userEvent.setup();
+      await given(looked({ ready: take, ...over }), () => Promise.reject(why));
+      render(<About kept={null} change={nothing} />);
+      await who.click(await screen.findByRole("button", { name: "Actualizar" }));
+      return who;
+    }
+
+    it.each(["failed", "foreign", "boom"])("offers the website after %s", async (why) => {
+      const who = await failing(why);
+      const { invoke } = await import("@tauri-apps/api/core");
+      const link = await screen.findByRole("button", { name: web });
+      expect(link.closest(".asks")).not.toBeNull();
+      await who.click(link);
+      expect(vi.mocked(invoke)).toHaveBeenCalledWith("open_web", { url: releases });
+    });
+
+    it.each(["gone", "busy", "publishing", "nothing"])("does not after %s", async (why) => {
+      await failing(why);
+      await new Promise((done) => setTimeout(done, 50));
+      expect(screen.queryByRole("button", { name: web })).toBeNull();
+    });
+
+    it("does not for a copy the Store updates", async () => {
+      await failing("failed", { route: "store" });
+      await new Promise((done) => setTimeout(done, 50));
+      expect(screen.queryByRole("button", { name: web })).toBeNull();
+    });
+
+    it("goes away when the update is tried again", async () => {
+      const who = userEvent.setup();
+      let tries = 0;
+      await given(looked({ ready: take }), () => {
+        tries += 1;
+        return tries === 1 ? Promise.reject("failed") : new Promise(() => {});
+      });
+      render(<About kept={null} change={nothing} />);
+      await who.click(await screen.findByRole("button", { name: "Actualizar" }));
+      await screen.findByRole("button", { name: web });
+      await who.click(screen.getByRole("button", { name: "Actualizar" }));
+      await waitFor(() => expect(screen.queryByRole("button", { name: web })).toBeNull());
+    });
+  });
 });

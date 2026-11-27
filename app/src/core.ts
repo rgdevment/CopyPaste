@@ -457,6 +457,8 @@ export function useTrust() {
   return { trust, asked, ask };
 }
 
+export const RELEASES = "https://github.com/rgdevment/CopyPaste/releases";
+
 export type Route = "store" | "download";
 
 export type Coming = "queued" | "paused" | "notYet";
@@ -500,6 +502,7 @@ export function useUpdate() {
   const [busy, setBusy] = useState(false);
   const [trouble, setTrouble] = useState<string | null>(null);
   const [step, setStep] = useState<Underway | null>(null);
+  const [stranded, setStranded] = useState(false);
   const alive = useRef(true);
   const inFlight = useRef(false);
 
@@ -525,6 +528,7 @@ export function useUpdate() {
     }
     inFlight.current = true;
     setTrouble(null);
+    setStranded(false);
     setBusy(true);
     invoke<Looked>("update_ready", { nowPlease })
       .then((one) => {
@@ -543,6 +547,7 @@ export function useUpdate() {
 
   const install = useCallback(() => {
     setTrouble(null);
+    setStranded(false);
     setBusy(true);
     const store = seen?.route === "store";
     invoke<void>("update_install")
@@ -555,7 +560,9 @@ export function useUpdate() {
       .catch((why) => {
         const said = String(why);
         if (!alive.current) return;
-        setTrouble(troubleSaid(said));
+        const shown = troubleSaid(said);
+        setTrouble(shown);
+        setStranded(!store && shown === t("updateFailed"));
         setBusy(false);
         setStep(null);
         if (said === "gone" || said === "nothing") {
@@ -564,7 +571,7 @@ export function useUpdate() {
       });
   }, [look, seen?.route]);
 
-  return { seen, busy, trouble, step, look, install };
+  return { seen, busy, trouble, stranded, step, look, install };
 }
 
 const LOOKS_AGAIN = 60 * 60 * 1000;
