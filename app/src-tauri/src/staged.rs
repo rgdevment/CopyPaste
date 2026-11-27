@@ -130,7 +130,7 @@ pub fn apply_at_start(app: &tauri::AppHandle) {
         drop_staged(held);
         return;
     };
-    match tauri::async_runtime::block_on(installed(app, &want, &bytes)) {
+    match installed(app, &want, &bytes) {
         Ok(()) => {
             update::forget();
             app.restart();
@@ -170,9 +170,9 @@ fn drop_staged(mut held: Kept) {
     update::keep(&held);
 }
 
-async fn installed(app: &tauri::AppHandle, want: &str, bytes: &[u8]) -> Result<(), Missed> {
+fn installed(app: &tauri::AppHandle, want: &str, bytes: &[u8]) -> Result<(), Missed> {
     let feeds = update::feeds_of(want).map_err(Missed::Failed)?;
-    let update = match checked_once_online(app, &feeds, want).await {
+    let update = match checked_once_online(app, &feeds, want) {
         Err(why) if unreachable(&why) => return Err(Missed::Offline(why.to_string())),
         Err(why) => return Err(Missed::Failed(why.to_string())),
         Ok(None) => return Err(Missed::Gone),
@@ -184,10 +184,15 @@ async fn installed(app: &tauri::AppHandle, want: &str, bytes: &[u8]) -> Result<(
     match update.install(bytes) {
         Ok(()) => Ok(()),
         Err(why) if update::worth_the_spare(&why) => {
-            let spare = update::checked(app, &feeds, want, Some(update::SPARE), AT_START)
-                .await
-                .map_err(|why| Missed::Failed(why.to_string()))?
-                .ok_or(Missed::Gone)?;
+            let spare = tauri::async_runtime::block_on(update::checked(
+                app,
+                &feeds,
+                want,
+                Some(update::SPARE),
+                AT_START,
+            ))
+            .map_err(|why| Missed::Failed(why.to_string()))?
+            .ok_or(Missed::Gone)?;
             let spare = update::trusted(spare, want).map_err(Missed::Failed)?;
             spare
                 .install(bytes)
@@ -197,7 +202,7 @@ async fn installed(app: &tauri::AppHandle, want: &str, bytes: &[u8]) -> Result<(
     }
 }
 
-async fn checked_once_online(
+fn checked_once_online(
     app: &tauri::AppHandle,
     feeds: &[tauri::Url],
     want: &str,
@@ -205,7 +210,8 @@ async fn checked_once_online(
     let since = std::time::Instant::now();
     loop {
         let left = NETWORK_AT_START.saturating_sub(since.elapsed());
-        match update::checked(app, feeds, want, None, left.min(AT_START)).await {
+        let patience = left.min(AT_START);
+        match tauri::async_runtime::block_on(update::checked(app, feeds, want, None, patience)) {
             Err(why) if unreachable(&why) && since.elapsed() + ONLINE_AGAIN < NETWORK_AT_START => {
                 std::thread::sleep(ONLINE_AGAIN);
             }
