@@ -60,23 +60,14 @@ function howItGoes(seen: Looked | null): string {
   return t("updateWhen");
 }
 
-function Progress({ step, store }: { step: Underway; store: boolean }) {
+function Progress({ step, store }: Readonly<{ step: Underway; store: boolean }>) {
   if (step.stage === "installing") {
     return <span>{t(store ? "updateInstallingStore" : "updateInstalling")}</span>;
   }
   return (
     <>
       <span>{fill("updateGettingFar", `${step.far} %`)}</span>
-      <span
-        role="progressbar"
-        aria-label={t("updateDo")}
-        aria-valuenow={step.far}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        className="bar"
-      >
-        <span style={{ width: `${step.far}%` }} />
-      </span>
+      <progress className="bar" aria-label={t("updateDo")} value={step.far} max={100} />
     </>
   );
 }
@@ -84,10 +75,10 @@ function Progress({ step, store }: { step: Underway; store: boolean }) {
 function AsksItself({
   offered,
   change,
-}: {
+}: Readonly<{
   offered: string;
   change: (what: Partial<Kept>) => Promise<void>;
-}) {
+}>) {
   return (
     <span className="asks">
       {t("itselfAsk")}
@@ -120,22 +111,74 @@ function AsksItself({
   );
 }
 
+function Status({
+  seen,
+  busy,
+  trouble,
+  step,
+}: Readonly<{
+  seen: Looked | null;
+  busy: boolean;
+  trouble: string | null;
+  step: Underway | null;
+}>) {
+  if (trouble) return <span>{trouble}</span>;
+  if (step) return <Progress step={step} store={seen?.route === "store"} />;
+  return <span>{busy && seen?.ready?.installs ? t("updateStarting") : howItGoes(seen)}</span>;
+}
+
+function Action({
+  seen,
+  busy,
+  onInstall,
+  onLook,
+  onShelf,
+}: Readonly<{
+  seen: Looked | null;
+  busy: boolean;
+  onInstall: () => void;
+  onLook: () => void;
+  onShelf: () => void;
+}>) {
+  const ready = seen?.ready ?? null;
+  if (ready?.installs) {
+    return (
+      <button type="button" className="strong" disabled={busy} onClick={onInstall}>
+        {busy ? t("updateGetting") : t("updateDo")}
+      </button>
+    );
+  }
+  if (ready?.coming) {
+    return (
+      <button type="button" className="mild" onClick={onShelf}>
+        {t("updateOpenShop")}
+      </button>
+    );
+  }
+  if ((ready && seen?.route === "store") || seen?.notSold) return null;
+  return (
+    <button type="button" className="mild" disabled={busy} onClick={onLook}>
+      {busy ? t("busy") : t("updateLook")}
+    </button>
+  );
+}
+
 function Newer({
   kept,
   here,
   change,
   onShelf,
-}: {
+}: Readonly<{
   kept: Kept | null;
   here: string | null;
   change: (what: Partial<Kept>) => Promise<void>;
   onShelf: () => void;
-}) {
+}>) {
   const { seen, busy, trouble, step, look, install } = useUpdate();
-  const store = seen?.route === "store";
   const ready = seen?.ready ?? null;
   const looked = !trouble && (seen?.looked ?? false);
   const itself = kept?.["updates-itself"] === true;
+  const asks = ready && !busy && !step && asksToUpdateItself(seen, kept, here);
 
   return (
     <>
@@ -143,30 +186,16 @@ function Newer({
         <span className={looked && !ready ? "pip ok" : "pip"} />
         <span className="grow" aria-live="polite">
           <b>{headline(seen, looked)}</b>
-          {trouble ? (
-            <span>{trouble}</span>
-          ) : step ? (
-            <Progress step={step} store={store} />
-          ) : (
-            <span>{busy && ready?.installs ? t("updateStarting") : howItGoes(seen)}</span>
-          )}
-          {ready && !busy && !step && asksToUpdateItself(seen, kept, here) && (
-            <AsksItself offered={ready.version} change={change} />
-          )}
+          <Status seen={seen} busy={busy} trouble={trouble} step={step} />
+          {asks && <AsksItself offered={ready.version} change={change} />}
         </span>
-        {ready?.installs ? (
-          <button type="button" className="strong" disabled={busy} onClick={install}>
-            {busy ? t("updateGetting") : t("updateDo")}
-          </button>
-        ) : ready?.coming ? (
-          <button type="button" className="mild" onClick={onShelf}>
-            {t("updateOpenShop")}
-          </button>
-        ) : (ready && store) || seen?.notSold ? null : (
-          <button type="button" className="mild" disabled={busy} onClick={() => look(true)}>
-            {busy ? t("busy") : t("updateLook")}
-          </button>
-        )}
+        <Action
+          seen={seen}
+          busy={busy}
+          onInstall={install}
+          onLook={() => look(true)}
+          onShelf={onShelf}
+        />
       </div>
       {kept && seen?.replacesItself && (
         <Line says={t("itself")} why={t("itselfWhy")}>

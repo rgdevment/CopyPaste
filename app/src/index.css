@@ -833,16 +833,22 @@ button:disabled {
 }
 
 .newer .bar {
+  display: block;
+  width: 100%;
   margin-top: 6px;
   height: 4px;
+  border: 0;
   border-radius: 2px;
+  appearance: none;
   background: var(--selected-edge);
   overflow: hidden;
 }
 
-.newer .bar > span {
-  margin: 0;
-  height: 100%;
+.newer .bar::-webkit-progress-bar {
+  background: var(--selected-edge);
+}
+
+.newer .bar::-webkit-progress-value {
   background: var(--accent);
 }
 

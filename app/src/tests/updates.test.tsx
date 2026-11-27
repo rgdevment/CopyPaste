@@ -323,7 +323,7 @@ describe("updates", () => {
       await who.click(await screen.findByRole("button", { name: "Actualizar" }));
       await said.say("updating", { stage: "getting", far: 40 });
       const bar = await screen.findByRole("progressbar");
-      expect(bar).toHaveAttribute("aria-valuenow", "40");
+      expect(bar).toHaveAttribute("value", "40");
       expect(screen.getByText("Descargando… 40 %")).toBeInTheDocument();
     });
 
@@ -390,7 +390,7 @@ describe("updates", () => {
       render(<About kept={null} change={nothing} />);
       await who.click(await screen.findByRole("button", { name: "Actualizar" }));
       await said.say("updating", { stage: "getting", far: 10 });
-      expect(await screen.findByRole("progressbar")).toHaveAttribute("aria-valuenow", "10");
+      expect(await screen.findByRole("progressbar")).toHaveAttribute("value", "10");
       await said.say("updating", { stage: "installing", far: 100 });
       expect(await screen.findByText("Instalando…")).toBeInTheDocument();
     });
