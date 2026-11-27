@@ -1,0 +1,18 @@
+{
+  "version": "3.5.1-rc1",
+  "notes": "https://github.com/rgdevment/CopyPaste/releases/tag/v3.5.1-rc1",
+  "platforms": {
+    "windows-x86_64": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.5.1-rc1/copanda-installer-3.5.1-rc1-windows-x86_64.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRdmJ5OVR1bHRNL3BVamZ1elNJek9NMHRRb1h6VGZrNXVuR1dvN2NKdWJwV1duQk0xWE03VUtCcWZmTW1JdExWQ3luWjg4a0cvT0tqeERSR0RFclovSWQ4cFV5ZXZRRGd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzQxMTIwCWZpbGU6Y29wYW5kYS1pbnN0YWxsZXItMy41LjEtcmMxLXdpbmRvd3MteDg2XzY0LmV4ZQl2ZXJzaW9uOjMuNS4xLXJjMQpDaXdJOHBKWVlnMTRYYWZiWlh5WEd4TUdDTjg4QXlac25VV1pqc2dybS9wbm5oSjdpckZ5YUNSQnlZdWF6aThEWnJFMzBtazhHRHFsL0RpOHpIVHNEZz09Cg=="
+    },
+    "darwin-aarch64": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.5.1-rc1/copanda-3.5.1-rc1-macos-aarch64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRdmJ5OVR1bHRNL3NPakMwQm12ZzU2SlFrckdRMlJ5VkZBZ2pHajlBd09oSElaRm9HRXFvd2o5b3RjcEUyUFIreGxTbW9CeHZteGh6aTNmMDF3ZWE0bjRET0tWUjlUL0FzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzQxMTIwCWZpbGU6Y29wYW5kYS0zLjUuMS1yYzEtbWFjb3MtYWFyY2g2NC5hcHAudGFyLmd6CXZlcnNpb246My41LjEtcmMxClBCRERMSnZmRHc3bWZ2cnUyRHh0R0paazc2dVRzVHcxR2t0REgzOWdNZXYxZUU4ZDFsWHNJRFlITnJiL2NVdHJLNG45WEJqU0o5VWpVODRxMnBwV0R3PT0K"
+    },
+    "darwin-x86_64": {
+      "url": "https://github.com/rgdevment/CopyPaste/releases/download/v3.5.1-rc1/copanda-3.5.1-rc1-macos-x86_64.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRdmJ5OVR1bHRNL210NEJmcitLNWJNK3VBQzl0aTR6SVNBVHU3OGczUStINUkvVnNQMXFSTm0rWUE1aTc5Y2V6eC8wT3BSUHJQTjN4c2N0eFJONUR3RUNXRnptcFlHcXdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NzQxMTIwCWZpbGU6Y29wYW5kYS0zLjUuMS1yYzEtbWFjb3MteDg2XzY0LmFwcC50YXIuZ3oJdmVyc2lvbjozLjUuMS1yYzEKRUlNazB1SitJZGpERythUWhzenB2ZnJ3QkNmU3RvWjBkeEZTUEZxVlpYenlzU3VJamZFVmJuekdFSUxCNkRGS09YcTU2b3dnSzlYU1ZvMmtUZkxPQ3c9PQo="
+    }
+  }
+}
