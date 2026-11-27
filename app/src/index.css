@@ -815,6 +815,43 @@ button:disabled {
   padding: 11px 13px;
 }
 
+.newer .asks {
+  margin-top: 6px;
+}
+
+.newer .asks .answers {
+  margin-top: 2px;
+}
+
+.newer .asks .welcome-link {
+  font-size: inherit;
+}
+
+.newer .asks i {
+  margin: 0 6px;
+  font-style: normal;
+}
+
+.newer .bar {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  height: 4px;
+  border: 0;
+  border-radius: 2px;
+  appearance: none;
+  background: var(--selected-edge);
+  overflow: hidden;
+}
+
+.newer .bar::-webkit-progress-bar {
+  background: var(--selected-edge);
+}
+
+.newer .bar::-webkit-progress-value {
+  background: var(--accent);
+}
+
 .pip {
   width: 8px;
   height: 8px;

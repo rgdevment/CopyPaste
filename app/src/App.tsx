@@ -35,6 +35,7 @@ export default function App() {
   useEffect(() => wearFonts({ text, code }), [text, code]);
   const panelTrouble = useTrouble();
   const waiting = useWaiting();
+  const named = waiting?.ready?.version || null;
 
   useEffect(() => {
     const asked = listen<string>("rail", (event) => {
@@ -67,7 +68,7 @@ export default function App() {
             );
           })}
           <span className="spacer" />
-          {waiting && where !== "about" && (
+          {named && where !== "about" && (
             <button
               type="button"
               className="waiting"
@@ -75,7 +76,7 @@ export default function App() {
               onClick={() => setWhere("about")}
             >
               <i />
-              {fill("updateGoTo", waiting)}
+              {fill("updateGoTo", named)}
             </button>
           )}
           <button type="button" aria-current={where === "about"} onClick={() => setWhere("about")}>
@@ -99,7 +100,7 @@ export default function App() {
           {kept && where === "keys" && <Keys kept={kept} change={change} />}
           {kept && where === "history" && <History kept={kept} change={change} />}
           {where === "backup" && <Backup />}
-          {where === "about" && <About />}
+          {where === "about" && <About kept={kept} change={change} />}
         </main>
       </div>
     </>

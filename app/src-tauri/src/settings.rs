@@ -117,6 +117,12 @@ pub async fn looks() -> cp_config::look::Choices {
 pub fn keep(app: tauri::AppHandle, config: Config) -> Result<Config, String> {
     let said = written(&app, config);
     crate::looks::wear(&app);
+    if said
+        .as_ref()
+        .is_ok_and(|one| one.updates_itself == Some(true))
+    {
+        crate::staged::stage_soon(&app);
+    }
     if let Ok(now) = settings() {
         let _ = tauri::Emitter::emit(&app, "kept", now);
     }

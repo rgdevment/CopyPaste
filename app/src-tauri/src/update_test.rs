@@ -161,6 +161,7 @@ fn what_is_kept_survives_being_written_and_read_again() {
         checked_at: Some(1_700_000_000),
         found: Some("3.0.1".to_owned()),
         from: Some("3.0.0".to_owned()),
+        ..Kept::default()
     };
     let said = serde_json::to_string(&one).expect("written");
     let back: Kept = serde_json::from_str(&said).expect("read");
@@ -172,15 +173,83 @@ fn what_is_kept_survives_being_written_and_read_again() {
 }
 
 #[test]
-fn a_store_copy_never_claims_to_have_looked() {
-    let looked = Looked {
-        route: Route::Store,
-        looked: false,
-        ready: None,
+fn what_the_store_and_the_staging_remember_survives_being_written_and_read_again() {
+    let one = Kept {
+        checked_at: Some(1),
+        found: Some("3.6.0".to_owned()),
+        from: Some("3.5.1".to_owned()),
+        shop: Some(crate::shop::Memory {
+            version: Some("3.6.0".to_owned()),
+            said: Some(crate::shop::Said::NotYet),
+        }),
+        staged: Some("3.6.0".to_owned()),
+        tried: Some("3.5.9".to_owned()),
+        attempt: Some(Attempt {
+            version: "3.6.0".to_owned(),
+            at: 99,
+        }),
+        offline_starts: Some(2),
     };
-    assert!(
-        !looked.looked,
-        "saying nothing is not saying it is up to date"
+    let said = serde_json::to_string(&one).expect("written");
+    assert!(said.contains(r#""said":"notYet""#), "{said}");
+    let back: Kept = serde_json::from_str(&said).expect("read");
+    assert_eq!(back, one);
+}
+
+#[test]
+fn what_is_not_there_is_not_written() {
+    let said = serde_json::to_string(&Kept::default()).expect("written");
+    for key in ["shop", "staged", "tried", "attempt", "offline_starts"] {
+        assert!(!said.contains(key), "{said}");
+    }
+}
+
+#[test]
+fn a_file_kept_before_the_store_and_the_staging_still_reads() {
+    let old: Kept =
+        serde_json::from_str(r#"{"checked_at":1700000000,"found":"3.0.1","from":"3.0.0"}"#)
+            .expect("an old file reads");
+    assert_eq!(old.found.as_deref(), Some("3.0.1"));
+    assert_eq!(old.shop, None);
+    assert_eq!(old.staged, None);
+    assert_eq!(old.tried, None);
+    assert_eq!(old.attempt, None);
+    assert_eq!(old.offline_starts, None);
+}
+
+#[test]
+fn only_a_stable_release_ahead_counts_for_a_copy_the_store_sells() {
+    let manifest = |latest: &str, pre: &str| {
+        format!(r#"{{"schema":1,"latest":"{latest}","latestPrerelease":"{pre}"}}"#)
+    };
+    assert_eq!(
+        newer_stable("3.5.1", &manifest("3.6.0", "3.7.0-rc1")),
+        Ok(Some("3.6.0".to_owned()))
+    );
+    assert_eq!(
+        newer_stable("3.5.1", &manifest("3.5.1", "3.7.0-rc1")),
+        Ok(None)
+    );
+    assert_eq!(
+        newer_stable("3.6.0", &manifest("3.5.1", "3.7.0-rc1")),
+        Ok(None)
+    );
+    assert_eq!(
+        newer_stable("3.5.0-rc1", &manifest("3.6.0-rc2", "3.7.0-rc1")),
+        Ok(None)
+    );
+    assert_eq!(
+        newer_stable("nonsense", &manifest("3.6.0", "3.7.0-rc1")),
+        Ok(None)
+    );
+    assert_eq!(newer_stable("3.5.1", "not json"), Err(UNREADABLE));
+    assert_eq!(
+        newer_stable("3.5.1", r#"{"schema":2,"latest":"3.6.0"}"#),
+        Err(UNREADABLE)
+    );
+    assert_eq!(
+        newer_stable("3.5.1", r#"{"schema":1,"latest":"soon"}"#),
+        Err(UNREADABLE)
     );
 }
 

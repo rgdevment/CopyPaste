@@ -91,6 +91,8 @@ pub struct Config {
     #[serde(with = "look::lenient")]
     pub panel_size: PanelSize,
     pub high_contrast: bool,
+    pub updates_itself: Option<bool>,
+    pub updates_itself_put_off: Option<String>,
 }
 
 mod count {
@@ -137,6 +139,8 @@ impl Default for Config {
             accent: Accent::default(),
             panel_size: PanelSize::default(),
             high_contrast: false,
+            updates_itself: None,
+            updates_itself_put_off: None,
         }
     }
 }
@@ -173,6 +177,7 @@ impl Config {
         self.welcomed = trimmed(self.welcomed.take());
         self.font = trimmed(self.font.take());
         self.code_font = trimmed(self.code_font.take());
+        self.updates_itself_put_off = trimmed(self.updates_itself_put_off.take());
         self
     }
 }

@@ -465,7 +465,7 @@ describe("the window", () => {
     }
   });
 
-  it("a Store copy claims nothing: the Store takes care of it", async () => {
+  it("a Store copy that has not asked claims nothing and can ask the Store", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const real = vi.mocked(invoke).getMockImplementation();
     vi.mocked(invoke).mockImplementation((what: string, args?: unknown) => {
@@ -480,7 +480,7 @@ describe("the window", () => {
       expect(await screen.findByText("La Microsoft Store se encarga")).toBeDefined();
       expect(screen.queryByText("Estás en la última versión")).toBeNull();
       expect(document.querySelector(".pip.ok")).toBeNull();
-      expect(screen.queryByRole("button", { name: "Buscar ahora" })).toBeNull();
+      expect(screen.getByRole("button", { name: "Buscar ahora" })).toBeDefined();
     } finally {
       vi.mocked(invoke).mockImplementation(real as never);
     }

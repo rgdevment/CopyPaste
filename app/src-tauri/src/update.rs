@@ -9,7 +9,7 @@ const RELEASES: [&str; 2] = [
     "/rgdevment/CopyPaste/releases/download/",
     "/rgdevment/CoPanda/releases/download/",
 ];
-const SPARE: &str = include_str!("../updater-spare.pub").trim_ascii();
+pub const SPARE: &str = include_str!("../updater-spare.pub").trim_ascii();
 const ROOM: usize = 64 * 1024;
 const DOWNLOAD: std::time::Duration = std::time::Duration::from_secs(600);
 
@@ -21,16 +21,19 @@ const CANDIDATE: &str =
 static TURN: AtomicU64 = AtomicU64::new(0);
 
 const PATIENCE: std::time::Duration = std::time::Duration::from_secs(10);
+pub const CHECKING: std::time::Duration = std::time::Duration::from_secs(30);
 const FIRST_LOOK: std::time::Duration = std::time::Duration::from_secs(20);
 const LOOKS_AGAIN: std::time::Duration = std::time::Duration::from_secs(60 * 60);
+
+pub const HERE: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Default)]
 pub struct Installing(AtomicBool);
 
-struct Alone<'a>(&'a AtomicBool);
+pub struct Alone<'a>(&'a AtomicBool);
 
 impl Installing {
-    fn claim(&self) -> Option<Alone<'_>> {
+    pub fn claim(&self) -> Option<Alone<'_>> {
         self.0
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .is_ok()
@@ -56,6 +59,15 @@ pub enum Route {
 pub struct Ready {
     pub version: String,
     pub installs: bool,
+    pub coming: Option<Coming>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Coming {
+    Queued,
+    Paused,
+    NotYet,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -64,14 +76,32 @@ pub struct Looked {
     pub route: Route,
     pub looked: bool,
     pub ready: Option<Ready>,
+    pub not_sold: bool,
+    pub replaces_itself: bool,
 }
 
-#[derive(Default, serde::Serialize, serde::Deserialize)]
-struct Kept {
-    checked_at: Option<u64>,
-    found: Option<String>,
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Kept {
+    pub checked_at: Option<u64>,
+    pub found: Option<String>,
     #[serde(default)]
-    from: Option<String>,
+    pub from: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shop: Option<crate::shop::Memory>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub staged: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tried: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attempt: Option<Attempt>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub offline_starts: Option<u32>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Attempt {
+    pub version: String,
+    pub at: u64,
 }
 
 pub const fn self_installs(route: Route) -> bool {
@@ -114,13 +144,14 @@ struct Manifest {
 pub const OFFLINE: &str = "offline";
 pub const UNREADABLE: &str = "unreadable";
 pub const BUSY: &str = "busy";
-pub const ELSEWHERE: &str = "elsewhere";
 pub const MOUNTED: &str = "mounted";
 pub const NOTHING: &str = "nothing";
 pub const PUBLISHING: &str = "publishing";
 pub const GONE: &str = "gone";
 pub const FOREIGN: &str = "foreign";
 pub const FAILED: &str = "failed";
+pub const STOPPED: &str = "stopped";
+pub const UNANSWERED: &str = "unanswered";
 
 fn read(manifest: &str) -> Result<Manifest, &'static str> {
     let read: Manifest = serde_json::from_str(manifest).map_err(|_| UNREADABLE)?;
@@ -148,6 +179,17 @@ pub fn newer(here: &str, manifest: &str) -> Result<Option<String>, &'static str>
     Ok(newer_in(here, &read))
 }
 
+pub fn newer_stable(here: &str, manifest: &str) -> Result<Option<String>, &'static str> {
+    let read = read(manifest)?;
+    let (Ok(stable), Ok(running)) = (
+        read.latest.parse::<semver::Version>(),
+        here.parse::<semver::Version>(),
+    ) else {
+        return Ok(None);
+    };
+    Ok((stable.pre.is_empty() && stable > running).then(|| stable.to_string()))
+}
+
 fn newer_in(here: &str, read: &Manifest) -> Option<String> {
     let running: semver::Version = here.parse().ok()?;
     let candidates = tracks_candidates(here);
@@ -173,6 +215,7 @@ async fn looked(
     asked: String,
     target: Option<&'static str>,
     key: Option<&'static str>,
+    patience: std::time::Duration,
 ) -> Result<Option<tauri_plugin_updater::Update>, tauri_plugin_updater::Error> {
     use tauri_plugin_updater::UpdaterExt;
     let mut builder = app.updater_builder();
@@ -185,28 +228,29 @@ async fn looked(
     builder
         .endpoints(feeds)?
         .version_comparator(move |_, release| release.version.to_string() == asked)
-        .timeout(std::time::Duration::from_secs(30))
+        .timeout(patience)
         .build()?
         .check()
         .await
 }
 
-async fn checked(
+pub async fn checked(
     app: &tauri::AppHandle,
     feeds: &[tauri::Url],
     want: &str,
-    native: Option<&'static str>,
     key: Option<&'static str>,
+    patience: std::time::Duration,
 ) -> Result<Option<tauri_plugin_updater::Update>, tauri_plugin_updater::Error> {
-    match looked(app, feeds.to_vec(), want.to_owned(), native, key).await {
+    let native = native();
+    match looked(app, feeds.to_vec(), want.to_owned(), native, key, patience).await {
         Err(tauri_plugin_updater::Error::TargetNotFound(_)) if native.is_some() => {
-            looked(app, feeds.to_vec(), want.to_owned(), None, key).await
+            looked(app, feeds.to_vec(), want.to_owned(), None, key, patience).await
         }
         other => other,
     }
 }
 
-fn failed(want: &str, why: &dyn std::fmt::Display) -> String {
+pub fn failed(want: &str, why: &dyn std::fmt::Display) -> String {
     crate::note::note(&format!("the update to {want} did not go through: {why}"));
     FAILED.to_owned()
 }
@@ -215,7 +259,7 @@ pub const fn worth_the_spare(why: &tauri_plugin_updater::Error) -> bool {
     matches!(why, tauri_plugin_updater::Error::Minisign(_))
 }
 
-fn trusted(
+pub fn trusted(
     mut update: tauri_plugin_updater::Update,
     want: &str,
 ) -> Result<tauri_plugin_updater::Update, String> {
@@ -227,12 +271,11 @@ fn trusted(
     Ok(update)
 }
 
-async fn downloaded(
+pub async fn downloaded(
     app: &tauri::AppHandle,
     update: tauri_plugin_updater::Update,
     feeds: &[tauri::Url],
     want: &str,
-    native: Option<&'static str>,
 ) -> Result<(tauri_plugin_updater::Update, Vec<u8>), String> {
     let update = trusted(update, want)?;
     match update.download(|_, _| {}, || {}).await {
@@ -241,7 +284,7 @@ async fn downloaded(
             crate::note::note(&format!(
                 "{want} does not verify against the primary updater key, so the spare is tried: {why}"
             ));
-            let spare = checked(app, feeds, want, native, Some(SPARE))
+            let spare = checked(app, feeds, want, Some(SPARE), CHECKING)
                 .await
                 .map_err(|why| failed(want, &why))?
                 .ok_or_else(|| failed(want, &"the feed stopped offering it"))?;
@@ -260,6 +303,10 @@ pub fn target_for(arch: &str, translated: bool) -> Option<&'static str> {
     (arch == "x86_64" && translated).then_some("darwin-aarch64")
 }
 
+fn native() -> Option<&'static str> {
+    target_for(std::env::consts::ARCH, translated())
+}
+
 fn translated() -> bool {
     #[cfg(target_os = "macos")]
     {
@@ -271,6 +318,13 @@ fn translated() -> bool {
     }
 }
 
+pub fn feeds_of(version: &str) -> Result<Vec<tauri::Url>, String> {
+    feeds_for(version)
+        .into_iter()
+        .map(|one| one.parse::<tauri::Url>().map_err(|why| why.to_string()))
+        .collect()
+}
+
 pub fn feeds_for(version: &str) -> Vec<&'static str> {
     if tracks_candidates(version) {
         vec![CANDIDATE, LATEST]
@@ -279,7 +333,7 @@ pub fn feeds_for(version: &str) -> Vec<&'static str> {
     }
 }
 
-async fn fetched() -> Result<String, String> {
+pub async fn fetched() -> Result<String, String> {
     if rustls::crypto::CryptoProvider::get_default().is_none() {
         let _ = rustls::crypto::ring::default_provider().install_default();
     }
@@ -333,7 +387,7 @@ pub fn route() -> Route {
     chosen(std::env::current_exe().ok().as_deref())
 }
 
-fn now() -> u64 {
+pub fn now() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |since| since.as_secs())
@@ -343,31 +397,33 @@ fn at() -> Option<PathBuf> {
     Some(crate::settings::folder()?.join("update.json"))
 }
 
-fn kept() -> Kept {
+pub fn kept() -> Kept {
     at().and_then(|path| std::fs::read_to_string(path).ok())
         .and_then(|said| serde_json::from_str(&said).ok())
         .unwrap_or_default()
 }
 
-fn keep(one: &Kept) {
+pub fn keep(one: &Kept) {
     let Some(path) = at() else {
         return;
     };
     let Ok(said) = serde_json::to_string(one) else {
         return;
     };
+    let _ = laid_down(&path, said.as_bytes());
+}
+
+pub fn laid_down(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
+        std::fs::create_dir_all(dir)?;
     }
     let turn = TURN.fetch_add(1, Ordering::Relaxed);
     let landing = path.with_extension(format!("{}.{turn}.part", std::process::id()));
-    if poured(&landing, said.as_bytes()).is_err() {
-        let _ = std::fs::remove_file(&landing);
-        return;
-    }
-    if std::fs::rename(&landing, &path).is_err() {
+    let moved = poured(&landing, bytes).and_then(|()| std::fs::rename(&landing, path));
+    if moved.is_err() {
         let _ = std::fs::remove_file(&landing);
     }
+    moved
 }
 
 fn poured(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
@@ -377,10 +433,15 @@ fn poured(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     file.sync_all()
 }
 
+pub fn replaces_itself() -> bool {
+    self_installs(route()) && !mounted(std::env::current_exe().ok().as_deref())
+}
+
 fn offered(version: &str, route: Route) -> Option<Ready> {
-    allowed(version, env!("CARGO_PKG_VERSION")).then(|| Ready {
+    allowed(version, HERE).then(|| Ready {
         version: version.to_owned(),
-        installs: self_installs(route) && !mounted(std::env::current_exe().ok().as_deref()),
+        installs: self_installs(route) && replaces_itself(),
+        coming: None,
     })
 }
 
@@ -390,72 +451,85 @@ pub fn install_route() -> Route {
 }
 
 #[tauri::command(async)]
-pub async fn update_ready(now_please: Option<bool>) -> Result<Looked, String> {
-    let route = route();
-    if route == Route::Store {
-        return Ok(Looked {
-            route,
-            looked: false,
-            ready: None,
-        });
-    }
+pub async fn update_ready(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+    now_please: Option<bool>,
+) -> Result<Looked, String> {
     let asked = now_please.unwrap_or(false);
-    let here = env!("CARGO_PKG_VERSION");
+    if route() == Route::Store {
+        return crate::shop::looked(crate::shop::owner(&window), asked).await;
+    }
+    let looked = looked_for_download(asked).await?;
+    if looked.ready.as_ref().is_some_and(|one| one.installs) {
+        crate::staged::stage_soon(&app);
+    }
+    Ok(looked)
+}
+
+async fn looked_for_download(asked: bool) -> Result<Looked, String> {
+    let route = Route::Download;
     let held = kept();
-    let fresh = held.from.as_deref() == Some(here);
+    let fresh = held.from.as_deref() == Some(HERE);
     if !asked && fresh && !due(held.checked_at, now()) {
         return Ok(Looked {
             route,
             looked: held.checked_at.is_some(),
             ready: held.found.as_deref().and_then(|one| offered(one, route)),
+            not_sold: false,
+            replaces_itself: replaces_itself(),
         });
     }
 
     let manifest = fetched().await?;
-    let seen = newer(here, &manifest).map_err(str::to_owned)?;
+    let seen = newer(HERE, &manifest).map_err(str::to_owned)?;
+    let latest = kept();
     keep(&Kept {
         checked_at: Some(now()),
         found: seen.clone(),
-        from: Some(here.to_owned()),
+        from: Some(HERE.to_owned()),
+        shop: None,
+        staged: latest.staged.filter(|_| fresh),
+        tried: latest.tried.filter(|_| fresh),
+        attempt: latest.attempt.filter(|_| fresh),
+        offline_starts: latest.offline_starts.filter(|_| fresh),
     });
     Ok(Looked {
         route,
         looked: true,
         ready: seen.as_deref().and_then(|one| offered(one, route)),
+        not_sold: false,
+        replaces_itself: replaces_itself(),
     })
 }
 
 #[tauri::command(async)]
 pub async fn update_install(
     app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
     alone: tauri::State<'_, Installing>,
 ) -> Result<(), String> {
     let _busy = alone.inner().claim().ok_or_else(|| BUSY.to_owned())?;
 
     let route = route();
-    if !self_installs(route) {
-        return Err(ELSEWHERE.to_owned());
+    if route == Route::Store {
+        return crate::shop::install(&app, crate::shop::owner(&window)).await;
     }
     if mounted(std::env::current_exe().ok().as_deref()) {
         return Err(MOUNTED.to_owned());
     }
     let held = kept();
-    let here = env!("CARGO_PKG_VERSION");
     let want = held
         .found
-        .filter(|_| held.from.as_deref() == Some(here))
+        .filter(|_| held.from.as_deref() == Some(HERE))
         .ok_or_else(|| NOTHING.to_owned())?;
-    if !allowed(&want, here) {
+    if !allowed(&want, HERE) {
         forget();
         return Err(NOTHING.to_owned());
     }
 
-    let feeds = feeds_for(&want)
-        .into_iter()
-        .map(|one| one.parse::<tauri::Url>().map_err(|why| why.to_string()))
-        .collect::<Result<Vec<_>, _>>()?;
-    let native = target_for(std::env::consts::ARCH, translated());
-    let update = checked(&app, &feeds, &want, native, None)
+    let feeds = feeds_of(&want)?;
+    let update = checked(&app, &feeds, &want, None, CHECKING)
         .await
         .map_err(|why| failed(&want, &why))?;
 
@@ -463,14 +537,14 @@ pub async fn update_install(
         let still = fetched()
             .await
             .ok()
-            .and_then(|manifest| newer(here, &manifest).ok().flatten());
+            .and_then(|manifest| newer(HERE, &manifest).ok().flatten());
         if still.as_deref() == Some(want.as_str()) {
             return Err(PUBLISHING.to_owned());
         }
         forget();
         return Err(GONE.to_owned());
     };
-    let (update, bytes) = downloaded(&app, update, &feeds, &want, native).await?;
+    let (update, bytes) = downloaded(&app, update, &feeds, &want).await?;
 
     let waiting = app.clone();
     let _ = tauri::async_runtime::spawn_blocking(move || crate::panel::quit(&waiting)).await;
@@ -487,23 +561,31 @@ pub async fn update_install(
         .map_err(|why| why.to_string())
 }
 
-pub fn keep_looking() {
+pub fn keep_looking(app: &tauri::AppHandle) {
     if route() == Route::Store {
         return;
     }
-    std::thread::spawn(|| {
+    let app = app.clone();
+    std::thread::spawn(move || {
         std::thread::sleep(FIRST_LOOK);
         loop {
-            if let Err(why) = tauri::async_runtime::block_on(update_ready(None)) {
-                crate::note::note(&format!("looking for an update on its own failed: {why}"));
+            match tauri::async_runtime::block_on(looked_for_download(false)) {
+                Ok(looked) if looked.ready.as_ref().is_some_and(|one| one.installs) => {
+                    crate::staged::stage_soon(&app);
+                }
+                Ok(_) => {}
+                Err(why) => {
+                    crate::note::note(&format!("looking for an update on its own failed: {why}"));
+                }
             }
             std::thread::sleep(LOOKS_AGAIN);
         }
     });
 }
 
-fn forget() {
+pub fn forget() {
     keep(&Kept::default());
+    crate::staged::discard();
 }
 
 #[cfg(test)]

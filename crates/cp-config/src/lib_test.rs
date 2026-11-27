@@ -43,6 +43,8 @@ fn what_goes_in_comes_back() {
         accent: Accent::Teal,
         panel_size: PanelSize::Tall,
         high_contrast: true,
+        updates_itself: Some(true),
+        updates_itself_put_off: Some("3.6".into()),
     };
     write(&path, &mine).expect("writes");
     assert_eq!(read(&path).expect("reads"), mine);
@@ -838,4 +840,48 @@ fn the_list_density_and_the_panel_size_are_written_as_the_settings_say_them() {
     assert!(text.contains("panel-size = \"large\""), "{text}");
     assert!(text.contains("high-contrast = true"), "{text}");
     assert_eq!(read(&path).expect("reads"), mine);
+}
+
+#[test]
+fn a_copy_that_was_never_asked_does_not_update_itself() {
+    assert_eq!(Config::default().updates_itself, None);
+}
+
+#[test]
+fn a_config_without_the_updates_key_reads_as_never_answered() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "theme = \"dark\"\n").expect("written");
+    let config = read(&path).expect("reads");
+    assert_eq!(config.theme, Theme::Dark);
+    assert_eq!(config.updates_itself, None);
+}
+
+#[test]
+fn a_no_to_updating_itself_survives_writing_and_reading() {
+    let dir = a_dir();
+    let path = at(dir.path());
+    let said_no = Config {
+        updates_itself: Some(false),
+        ..Config::default()
+    };
+    write(&path, &said_no).expect("writes");
+    assert_eq!(read(&path).expect("reads").updates_itself, Some(false));
+    let text = std::fs::read_to_string(&path).expect("file");
+    assert!(text.contains("updates-itself = false"), "{text}");
+}
+
+#[test]
+fn what_was_put_off_is_unset_by_default_and_kept_trimmed() {
+    assert_eq!(Config::default().updates_itself_put_off, None);
+    let dir = a_dir();
+    let path = at(dir.path());
+    std::fs::write(&path, "updates-itself-put-off = \" 3.6 \"\n").expect("written");
+    assert_eq!(
+        read(&path)
+            .expect("reads")
+            .updates_itself_put_off
+            .as_deref(),
+        Some("3.6")
+    );
 }

@@ -2,12 +2,25 @@ import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
-import { licences, notices, type Route, useUpdate } from "../core";
+import {
+  asksToUpdateItself,
+  type Coming,
+  featureLine,
+  type Kept,
+  type Looked,
+  licences,
+  notices,
+  RELEASES,
+  type Route,
+  type Underway,
+  useUpdate,
+} from "../core";
 import linkunbound from "../linkunbound.svg";
-import { fill, t } from "../locales";
+import { fill, type Said, t } from "../locales";
 import { composed } from "../markdown";
 import panda from "../panda.svg";
 import tisty from "../tisty.svg";
+import { Knob, Line } from "./Bits";
 import { CloudOff, Code, Gift, Info, Key } from "./Icons";
 
 const STARS = "https://github.com/rgdevment/CopyPaste";
@@ -17,42 +30,209 @@ const ALTERNATIVE = "https://alternativeto.net/software/copypaste/about/";
 const RATING = "ms-windows-store://review/?ProductId=9NBJRZF3K856";
 const PRIVACY = "https://github.com/rgdevment/CopyPaste/blob/main/PRIVACY.md";
 
-function Newer() {
-  const { seen, busy, trouble, look, install } = useUpdate();
+const SHELF = "ms-windows-store://downloadsandupdates";
+
+const WAITS: Record<Coming, Said> = {
+  queued: "updateComingWhy",
+  paused: "updatePausedWhy",
+  notYet: "updateNotYetWhy",
+};
+
+function headline(seen: Looked | null, looked: boolean): string {
   const store = seen?.route === "store";
+  const ready = seen?.ready;
+  if (ready?.version) return fill("updateThere", ready.version);
+  if (ready)
+    return t(ready.installs || ready.coming === "paused" ? "updateStoreHas" : "updateStoreBrings");
+  if (seen?.notSold) return t("updateStoreNotHere");
+  if (store) return t(looked ? "updateNoneStore" : "updateStore");
+  return t(looked ? "updateNone" : "updateLook");
+}
+
+function howItGoes(seen: Looked | null): string {
+  const store = seen?.route === "store";
+  const ready = seen?.ready;
+  if (ready && store) {
+    if (ready.installs) return t("updateStoreTakes");
+    return t(ready.coming ? WAITS[ready.coming] : "updateLanded");
+  }
+  if (ready) return t(ready.installs ? "updateTake" : "updateMove");
+  if (store) return t(seen?.notSold ? "updateNotSold" : "updateStoreWhy");
+  return t("updateWhen");
+}
+
+function Progress({ step, store }: Readonly<{ step: Underway; store: boolean }>) {
+  if (step.stage === "installing") {
+    return <span>{t(store ? "updateInstallingStore" : "updateInstalling")}</span>;
+  }
+  return (
+    <>
+      <span>{fill("updateGettingFar", `${step.far} %`)}</span>
+      <progress className="bar" aria-label={t("updateDo")} value={step.far} max={100} />
+    </>
+  );
+}
+
+function AsksItself({
+  offered,
+  change,
+}: Readonly<{
+  offered: string;
+  change: (what: Partial<Kept>) => Promise<void>;
+}>) {
+  return (
+    <span className="asks">
+      {t("itselfAsk")}
+      <span className="answers">
+        <button
+          type="button"
+          className="welcome-link"
+          onClick={() => change({ "updates-itself": true })}
+        >
+          {t("itselfYes")}
+        </button>
+        <i aria-hidden="true">·</i>
+        <button
+          type="button"
+          className="welcome-link"
+          onClick={() => change({ "updates-itself-put-off": featureLine(offered) })}
+        >
+          {t("itselfLater")}
+        </button>
+        <i aria-hidden="true">·</i>
+        <button
+          type="button"
+          className="welcome-link"
+          onClick={() => change({ "updates-itself": false })}
+        >
+          {t("itselfNever")}
+        </button>
+      </span>
+    </span>
+  );
+}
+
+function Status({
+  seen,
+  busy,
+  trouble,
+  stranded,
+  step,
+  onWeb,
+}: Readonly<{
+  seen: Looked | null;
+  busy: boolean;
+  trouble: string | null;
+  stranded: boolean;
+  step: Underway | null;
+  onWeb: () => void;
+}>) {
+  if (trouble && stranded) {
+    return (
+      <>
+        <span>{trouble}</span>
+        <span className="asks">
+          <button type="button" className="welcome-link" onClick={onWeb}>
+            {t("updateFromWeb")}
+          </button>
+        </span>
+      </>
+    );
+  }
+  if (trouble) return <span>{trouble}</span>;
+  if (step) return <Progress step={step} store={seen?.route === "store"} />;
+  return <span>{busy && seen?.ready?.installs ? t("updateStarting") : howItGoes(seen)}</span>;
+}
+
+function Action({
+  seen,
+  busy,
+  onInstall,
+  onLook,
+  onShelf,
+}: Readonly<{
+  seen: Looked | null;
+  busy: boolean;
+  onInstall: () => void;
+  onLook: () => void;
+  onShelf: () => void;
+}>) {
+  const ready = seen?.ready ?? null;
+  if (ready?.installs) {
+    return (
+      <button type="button" className="strong" disabled={busy} onClick={onInstall}>
+        {busy ? t("updateGetting") : t("updateDo")}
+      </button>
+    );
+  }
+  if (ready?.coming) {
+    return (
+      <button type="button" className="mild" onClick={onShelf}>
+        {t("updateOpenShop")}
+      </button>
+    );
+  }
+  if ((ready && seen?.route === "store") || seen?.notSold) return null;
+  return (
+    <button type="button" className="mild" disabled={busy} onClick={onLook}>
+      {busy ? t("busy") : t("updateLook")}
+    </button>
+  );
+}
+
+function Newer({
+  kept,
+  here,
+  change,
+  onShelf,
+  onWeb,
+}: Readonly<{
+  kept: Kept | null;
+  here: string | null;
+  change: (what: Partial<Kept>) => Promise<void>;
+  onShelf: () => void;
+  onWeb: () => void;
+}>) {
+  const { seen, busy, trouble, stranded, step, look, install } = useUpdate();
   const ready = seen?.ready ?? null;
   const looked = !trouble && (seen?.looked ?? false);
-
-  const says = ready
-    ? fill("updateThere", ready.version)
-    : store
-      ? t("updateStore")
-      : looked
-        ? t("updateNone")
-        : t("updateLook");
-
-  let why = t("updateWhen");
-  if (ready) {
-    why = ready.installs ? t("updateTake") : t("updateMove");
-  }
+  const itself = kept?.["updates-itself"] === true;
+  const asks = ready && !busy && !step && asksToUpdateItself(seen, kept, here);
 
   return (
-    <div className="newer">
-      <span className={looked && !ready ? "pip ok" : "pip"} />
-      <span className="grow">
-        <b>{says}</b>
-        <span>{trouble ?? (store ? t("updateStoreWhy") : why)}</span>
-      </span>
-      {ready?.installs ? (
-        <button type="button" className="strong" disabled={busy} onClick={install}>
-          {busy ? t("updateGetting") : t("updateDo")}
-        </button>
-      ) : store ? null : (
-        <button type="button" className="mild" disabled={busy} onClick={() => look(true)}>
-          {busy ? t("busy") : t("updateLook")}
-        </button>
+    <>
+      <div className="newer">
+        <span className={looked && !ready ? "pip ok" : "pip"} />
+        <span className="grow" aria-live="polite">
+          <b>{headline(seen, looked)}</b>
+          <Status
+            seen={seen}
+            busy={busy}
+            trouble={trouble}
+            stranded={stranded}
+            step={step}
+            onWeb={onWeb}
+          />
+          {asks && <AsksItself offered={ready.version} change={change} />}
+        </span>
+        <Action
+          seen={seen}
+          busy={busy}
+          onInstall={install}
+          onLook={() => look(true)}
+          onShelf={onShelf}
+        />
+      </div>
+      {kept && seen?.replacesItself && (
+        <Line says={t("itself")} why={t("itselfWhy")}>
+          <Knob
+            on={itself}
+            says={t("itself")}
+            onPress={() => change({ "updates-itself": !itself })}
+          />
+        </Line>
       )}
-    </div>
+    </>
   );
 }
 
@@ -101,9 +281,15 @@ function Notices({
   return <section ref={box} className="notices" aria-label={label} />;
 }
 
-export const LINKS = [STARS, SPONSOR, COFFEE, ALTERNATIVE, RATING, PRIVACY];
+export const LINKS = [STARS, SPONSOR, COFFEE, ALTERNATIVE, RATING, PRIVACY, SHELF, RELEASES];
 
-export default function About() {
+export default function About({
+  kept,
+  change,
+}: {
+  kept: Kept | null;
+  change: (what: Partial<Kept>) => Promise<void>;
+}) {
   const [trouble, setTrouble] = useState<string | null>(null);
   const [version, setVersion] = useState<string | null>(null);
   const [unbound, setUnbound] = useState(false);
@@ -208,7 +394,13 @@ export default function About() {
         </div>
       </div>
 
-      <Newer />
+      <Newer
+        kept={kept}
+        here={version}
+        change={change}
+        onShelf={() => go(SHELF)}
+        onWeb={() => go(RELEASES)}
+      />
 
       <div className="rule">{t("supportTitle")}</div>
       <p className="quiet">{t("supportWhy")}</p>

@@ -257,7 +257,7 @@ const ES = {
   updateDo: "Actualizar",
   updateGetting: "Descargando…",
   updateStore: "La Microsoft Store se encarga",
-  updateStoreWhy: "Ella instala las versiones nuevas cuando están certificadas",
+  updateStoreWhy: "Se le pregunta al abrir esta ventana, como mucho cada media hora",
   updateOffline: "No se pudo comprobar ahora. Revisa tu conexión y vuelve a intentarlo.",
   updateUnreadable: "La información de versiones no se pudo leer. Vuelve a intentarlo más tarde.",
   updatePublishing: "Esta versión se está publicando. Vuelve a intentarlo en unos minutos.",
@@ -265,6 +265,34 @@ const ES = {
   updateFailed:
     "No se pudo actualizar. Vuelve a intentarlo; si sigue fallando, descárgala desde la web.",
   updateBusy: "Ya hay una actualización en marcha.",
+  updateStoreHas: "La Microsoft Store tiene una versión nueva",
+  updateStoreBrings: "La Microsoft Store está trayendo una versión nueva",
+  updateNoneStore: "La Microsoft Store no tiene nada más nuevo para esta copia ahora mismo",
+  updateStoreTakes: "La instala la Microsoft Store, sin salir de aquí",
+  updateComingWhy:
+    "La Microsoft Store la trae por su cuenta. Se instala sola cuando llegue y CoPanda no esté abierto.",
+  updatePausedWhy: "La Microsoft Store la tiene en pausa. Ábrela para reanudarla.",
+  updateNotYetWhy:
+    "La Microsoft Store todavía no se la ofrece a este equipo. Suele tardar unas horas; puedes revisarlo en la Store.",
+  updateLanded: "Ya está en este equipo y entra cuando CoPanda se cierre",
+  updateStoreNotHere: "La Microsoft Store no actualiza esta copia",
+  updateNotSold:
+    "Esta copia no vino de la Microsoft Store, así que la Store no la actualiza y ella no puede hacerlo sola",
+  updateInstallingStore: "La Microsoft Store está instalando la actualización…",
+  updateInstalling: "Instalando…",
+  updateGettingFar: "Descargando… {one}",
+  updateStarting: "Preparando la actualización…",
+  updateOpenShop: "Abrir Microsoft Store",
+  updateStopped: "La actualización se detuvo.",
+  updateUnanswered: "La Microsoft Store no respondió. Vuelve a intentarlo en un rato.",
+  itself: "Actualizar automáticamente",
+  itselfWhy:
+    "La versión nueva se descarga sola y se instala la próxima vez que CoPanda arranca, nunca mientras la usas",
+  itselfAsk: "¿Quieres que CoPanda se actualice sola de ahora en adelante?",
+  itselfYes: "Sí",
+  itselfLater: "Ahora no",
+  itselfNever: "No volver a preguntar",
+  updateFromWeb: "Descargar desde la web",
   aboutPrivacyLink: "Privacidad",
   keysFormer: "En CopyPaste 2 era Ctrl + Alt + C",
   wakeTheirsMac: "Aprueba CoPanda en Ajustes del Sistema › General › Ítems de inicio",
@@ -377,9 +405,9 @@ const ES = {
   welcomeShowAgain: "Ver la bienvenida de nuevo",
 } as const;
 
-type Said = typeof ES;
+export type Said = keyof typeof ES;
 
-const EN: Record<keyof Said, string> = {
+const EN: Record<Said, string> = {
   railGeneral: "General",
   railHistory: "History",
   railKeys: "Keyboard shortcuts",
@@ -638,7 +666,7 @@ const EN: Record<keyof Said, string> = {
   updateDo: "Update",
   updateGetting: "Downloading…",
   updateStore: "The Microsoft Store takes care of it",
-  updateStoreWhy: "It installs new versions once they are certified",
+  updateStoreWhy: "It is asked when this window opens, at most every half hour",
   updateOffline: "Could not check right now. Check your connection and try again.",
   updateUnreadable: "The version information could not be read. Try again later.",
   updatePublishing: "This version is still being published. Try again in a few minutes.",
@@ -646,6 +674,34 @@ const EN: Record<keyof Said, string> = {
   updateFailed:
     "The update did not go through. Try again; if it keeps failing, download it from the website.",
   updateBusy: "An update is already on its way.",
+  updateStoreHas: "Microsoft Store has a new version",
+  updateStoreBrings: "Microsoft Store is bringing a new version",
+  updateNoneStore: "Microsoft Store has nothing newer for this copy right now",
+  updateStoreTakes: "Microsoft Store installs it, without leaving this window",
+  updateComingWhy:
+    "Microsoft Store brings it on its own. It installs itself once it lands and CoPanda is not running.",
+  updatePausedWhy: "Microsoft Store has it paused. Open it to resume.",
+  updateNotYetWhy:
+    "Microsoft Store has not offered it to this computer yet. That usually takes a few hours; you can check in the Store.",
+  updateLanded: "It is already on this computer and takes over once CoPanda closes",
+  updateStoreNotHere: "Microsoft Store does not update this copy",
+  updateNotSold:
+    "This copy did not come from Microsoft Store, so the Store does not update it and it cannot update itself",
+  updateInstallingStore: "Microsoft Store is installing the update…",
+  updateInstalling: "Installing…",
+  updateGettingFar: "Downloading… {one}",
+  updateStarting: "Getting the update ready…",
+  updateOpenShop: "Open Microsoft Store",
+  updateStopped: "The update was stopped.",
+  updateUnanswered: "Microsoft Store did not answer. Try again in a while.",
+  itself: "Update automatically",
+  itselfWhy:
+    "The new version downloads on its own and installs the next time CoPanda starts, never while you use it",
+  itselfAsk: "Do you want CoPanda to update itself from now on?",
+  itselfYes: "Yes",
+  itselfLater: "Not now",
+  itselfNever: "Don't ask again",
+  updateFromWeb: "Download from the website",
   aboutPrivacyLink: "Privacy",
   keysFormer: "In CopyPaste 2 it was Ctrl + Alt + C",
   wakeTheirsMac: "Allow CoPanda in System Settings › General › Login Items",
@@ -908,7 +964,7 @@ const ONE_CLICK_ROWS: Record<string, Row> = {
 
 type Which = (typeof PANEL_ROWS)[number]["id"];
 
-let now: Record<keyof Said, string> = ES;
+let now: Record<Said, string> = ES;
 
 export function adopt(locale: string | null) {
   const asked = locale ?? navigator.language;
@@ -921,11 +977,11 @@ export function inEnglish() {
   return now === EN;
 }
 
-export function t(key: keyof Said) {
+export function t(key: Said) {
   return now[key];
 }
 
-export function fill(key: keyof Said, one: string, two = "") {
+export function fill(key: Said, one: string, two = "") {
   return now[key].replace("{one}", one).replace("{two}", two);
 }
 
@@ -936,7 +992,7 @@ export function sized(bytes: number) {
   return `${said} ${unit}`;
 }
 
-const PANEL_TROUBLE: Record<string, keyof Said> = {
+const PANEL_TROUBLE: Record<string, Said> = {
   unstarted: "panelUnstarted",
   "history-replaced": "panelHistoryReplaced",
   "history-unopened": "panelHistoryUnopened",
